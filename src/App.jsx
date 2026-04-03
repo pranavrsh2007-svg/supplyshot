@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { ThemeProvider, AuthProvider, VoiceProvider, useTheme } from "./context/AppContext";
+import { ThemeProvider, AuthProvider, VoiceProvider, RouteProvider, useTheme } from "./context/AppContext";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 
@@ -71,7 +71,9 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <VoiceProvider>
-            <AppLayout />
+            <RouteProvider>
+              <AppLayout />
+            </RouteProvider>
           </VoiceProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -27,8 +27,9 @@ export default function LocationSearch({ placeholder, value, onSelect, icon }) {
     setLoading(true);
     setError("");
     try {
+      const baseUrl = import.meta.env.VITE_NOMINATIM_SEARCH_URL || "https://nominatim.openstreetmap.org/search";
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " india")}&format=json&limit=6&addressdetails=1`,
+        `${baseUrl}?q=${encodeURIComponent(q + " india")}&format=json&limit=6&addressdetails=1`,
         { headers: { "Accept-Language": "en" } }
       );
       const data = await res.json();

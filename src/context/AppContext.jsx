@@ -3,6 +3,34 @@ import { createContext, useContext, useState, useEffect } from "react";
 const ThemeContext = createContext();
 const AuthContext  = createContext();
 const VoiceContext = createContext();
+const RouteContext = createContext();
+
+/* ── Route Data ────────────────────────────────────────── */
+export function RouteProvider({ children }) {
+  const [routeInfo, setRouteInfo] = useState({
+    source: null,
+    destination: null,
+    halts: [],
+    routeCoords: [],
+  });
+  
+  // Globally store fetched POIs per halt { haltKey: {...categories, radiusUsed} }
+  const [nearbyServices, setNearbyServices] = useState({});
+  const [nearbyServicesLoading, setNearbyServicesLoading] = useState(false);
+
+  return (
+    <RouteContext.Provider value={{ 
+      routeInfo, 
+      setRouteInfo, 
+      nearbyServices, 
+      setNearbyServices,
+      nearbyServicesLoading,
+      setNearbyServicesLoading
+    }}>
+      {children}
+    </RouteContext.Provider>
+  );
+}
 
 /* ── Theme ─────────────────────────────────────────────── */
 export function ThemeProvider({ children }) {
@@ -73,3 +101,4 @@ export function VoiceProvider({ children }) {
 export const useTheme = () => useContext(ThemeContext);
 export const useAuth  = () => useContext(AuthContext);
 export const useVoiceCtx = () => useContext(VoiceContext);
+export const useRoute = () => useContext(RouteContext);

@@ -1,9 +1,12 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { useTheme } from "../context/AppContext";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useTheme, useRoute } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import { useVoice } from "../hooks/useVoice";
+import { fetchNearbyServices, POI_CATEGORIES } from "../utils/fetchNearbyServices";
 import LocationSearch from "../components/LocationSearch";
 import LeafletMap, { ROUTE_COLORS } from "../components/LeafletMap";
+import NearbyPlacesLayer from "../components/NearbyPlacesLayer";
+import NearbyFilters from "../components/NearbyFilters";
 import {
   Navigation, ArrowUpDown, Locate, AlertTriangle, Loader2,
   MousePointer, Volume2, VolumeX, CheckCircle, Plus, X,
@@ -18,18 +21,18 @@ const fmt = (s) => {
 
 const ROUTE_META = [
   {
-    name: "Route #1 – Fastest", emoji: "⚡", tag: "Fastest",
-    color: ROUTE_COLORS[0], safetyScore: 78,
+    name: "Fastest Route 🚀", emoji: "⚡", tag: "Fastest",
+    color: "#0B5ED7", safetyScore: 78, weight: 6, opacity: 1,
     alerts: ["Heavy traffic zone", "Toll booths ×4"], durationMult: 1.0, distMult: 1.0,
   },
   {
-    name: "Route #2 – Safest ⭐", emoji: "🛡️", tag: "Recommended",
-    color: ROUTE_COLORS[1], safetyScore: 96,
+    name: "Safest Route ⭐", emoji: "🛡️", tag: "Recommended",
+    color: "#16A34A", safetyScore: 96, weight: 6, opacity: 1,
     alerts: ["No major hazards"], recommended: true, durationMult: 1.1, distMult: 1.08,
   },
   {
-    name: "Route #3 – Balanced", emoji: "⚖️", tag: "Balanced",
-    color: ROUTE_COLORS[2], safetyScore: 88,
+    name: "Balanced Route ⚖️", emoji: "⚖️", tag: "Balanced",
+    color: "#F97316", safetyScore: 88, weight: 5, opacity: 0.9,
     alerts: ["Minor road work", "Toll booths ×2"], durationMult: 1.05, distMult: 1.04,
   },
 ];
@@ -122,7 +125,8 @@ function WeatherCard({ location, label, darkMode }) {
 async function fetchOSRM(waypoints) {
   // waypoints: [{ lat, lon }, ...]
   const coords = waypoints.map((p) => `${p.lon},${p.lat}`).join(";");
-  const url    = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const baseUrl = import.meta.env.VITE_OSRM_API_URL || "https://router.project-osrm.org/route/v1/driving";
+  const url    = `${baseUrl}/${coords}?overview=full&geometries=geojson`;
   const res    = await fetch(url);
   const data   = await res.json();
   if (data.code !== "Ok" || !data.routes?.length) throw new Error("Route not found");
@@ -137,6 +141,7 @@ async function fetchOSRM(waypoints) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Planner() {
   const { darkMode } = useTheme();
+  const { setRouteInfo } = useRoute();
   const { t, i18n } = useTranslation();
   const { speak, voiceEnabled, toggleVoice, supported } = useVoice();
 
@@ -151,6 +156,27 @@ export default function Planner() {
   const [clickMode,   setClickMode]   = useState(null);   // "source"|"destination"|"halt-N"|null
   const [showWeather, setShowWeather] = useState(false);
   const alertTimers = useRef([]);
+
+  // ── Nearby places ──────────────────────────────────────────────────────────
+  const { setNearbyServices, nearbyServices: nearbyPlaces, nearbyServicesLoading: nearbyLoading, setNearbyServicesLoading } = useRoute();
+  const [nearbyError, setNearbyError] = useState("");
+  const [poiFilters, setPoiFilters] = useState(() => {
+    const init = {};
+    POI_CATEGORIES.forEach((c) => { init[c.key] = true; });
+    return init;
+  });
+
+  // Compute POI counts for filter badges
+  const poiCounts = useMemo(() => {
+    const counts = {};
+    POI_CATEGORIES.forEach((c) => { counts[c.key] = 0; });
+    Object.values(nearbyPlaces).forEach((haltData) => {
+      Object.entries(haltData).forEach(([catKey, items]) => {
+        counts[catKey] = (counts[catKey] || 0) + items.length;
+      });
+    });
+    return counts;
+  }, [nearbyPlaces]);
 
   useEffect(() => () => alertTimers.current.forEach(clearTimeout), []);
 
@@ -184,8 +210,9 @@ export default function Planner() {
   // ── Map click handler ────────────────────────────────────────────────────────
   const handleMapClick = useCallback(async ({ lat, lng }) => {
     try {
+      const baseUrl = import.meta.env.VITE_NOMINATIM_REVERSE_URL || "https://nominatim.openstreetmap.org/reverse";
       const res  = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+        `${baseUrl}?lat=${lat}&lon=${lng}&format=json`
       );
       const data = await res.json();
       const name = data.display_name?.split(",").slice(0, 3).join(", ")
@@ -227,20 +254,24 @@ export default function Planner() {
     setLoading(true); setError(""); setRouteData(null); setAllRoutes([]);
     alertTimers.current.forEach(clearTimeout);
 
+    let base;
     try {
       // Fetch base (fastest / safest / balanced)
-      const base = await fetchOSRM(waypoints);
+      base = await fetchOSRM(waypoints);
 
       // Build 3 route visualisations from the same geometry with style variations
-      // (In production each would be a separate API call; here we offset slightly)
-      const routes = ROUTE_META.map((m, i) => ({
-        coords:   base.coords,
-        distance: (base.distance * m.distMult).toFixed(1),
-        duration: base.duration * m.durationMult,
-        color:    selectedRoute === i ? m.color : m.color,   // updated on select
-        weight:   selectedRoute === i ? 7 : 3,
-        opacity:  selectedRoute === i ? 0.85 : 0.35,
-      }));
+      const routes = ROUTE_META.map((m, i) => {
+        const isSelected = selectedRoute === i;
+        return {
+          coords:   base.coords,
+          distance: (base.distance * m.distMult).toFixed(1),
+          duration: base.duration * m.durationMult,
+          color:    m.color,
+          weight:   isSelected ? 8 : m.weight,
+          opacity:  isSelected ? 1 : m.opacity,
+          name:     m.name,
+        };
+      });
 
       setRouteData({
         distance: base.distance.toFixed(1),
@@ -249,6 +280,16 @@ export default function Planner() {
         baseCoords: base.coords,
       });
       setAllRoutes(routes);
+
+      // Save to global context immediately
+      setRouteInfo({
+        source,
+        destination,
+        halts: validHalts,
+        routeCoords: base.coords,
+      });
+
+      console.log("Route loaded");
 
       // Voice alerts
       const VOICE_MSGS = [
@@ -275,17 +316,41 @@ export default function Planner() {
     } finally {
       setLoading(false);
     }
-  }, [source, destination, halts, speak, selectedRoute]);
+
+    // ── Fetch nearby places for halts in the background (Non-blocking) ──
+    if (validHalts.length > 0) {
+      console.log("Services loading...");
+      setNearbyServicesLoading(true);
+      fetchNearbyServices(validHalts, base.coords)
+        .then((services) => {
+          setNearbyServices(services);
+          console.log("Services loaded");
+          console.log("Planner services:", services);
+        })
+        .catch((err) => {
+          console.error(err);
+          setNearbyError("Failed to fetch nearby services.");
+        })
+        .finally(() => {
+          setNearbyServicesLoading(false);
+        });
+    }
+
+  }, [source, destination, halts, speak, selectedRoute, setRouteInfo, setNearbyServices, setNearbyServicesLoading, t]);
 
   // Update route line weights when selectedRoute changes
   useEffect(() => {
     if (allRoutes.length === 0) return;
     setAllRoutes((prev) =>
-      prev.map((r, i) => ({
-        ...r,
-        weight:  selectedRoute === i ? 7 : 3,
-        opacity: selectedRoute === i ? 0.85 : 0.35,
-      }))
+      prev.map((r, i) => {
+        const isSelected = selectedRoute === i;
+        const m = ROUTE_META[i];
+        return {
+          ...r,
+          weight:  isSelected ? 8 : m.weight,
+          opacity: isSelected ? 1 : m.opacity,
+        };
+      })
     );
   }, [selectedRoute]);
 
@@ -576,6 +641,18 @@ export default function Planner() {
             </div>
           )}
 
+          {/* Nearby services filter toggles – show after route with halts */}
+          {routeData && haltLocations.length > 0 && (
+            <NearbyFilters
+              filters={poiFilters}
+              setFilters={setPoiFilters}
+              loading={nearbyLoading}
+              error={nearbyError}
+              placeCounts={poiCounts}
+              darkMode={darkMode}
+            />
+          )}
+
           {/* Tip card when empty */}
           {!source && !destination && (
             <div className="card" style={{ padding: 14, fontSize: 13 }}>
@@ -600,7 +677,18 @@ export default function Planner() {
             height="calc(100vh - 180px)"
             clickMode={clickMode}
             onMapClick={handleMapClick}
-          />
+            onRouteClick={setSelected}
+          >
+            {/* Nearby places POI layer */}
+            {routeData && haltLocations.length > 0 && (
+              <NearbyPlacesLayer
+                places={nearbyPlaces}
+                filters={poiFilters}
+                haltCoords={haltLocations}
+                darkMode={darkMode}
+              />
+            )}
+          </LeafletMap>
 
           {/* Map overlay hint */}
           {!routeData && !loading && (
