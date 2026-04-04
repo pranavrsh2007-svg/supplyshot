@@ -15,7 +15,7 @@
  *   speak(t("voice.sosActivated"), true); // priority – cancels queue
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import i18n from "../i18n";
 import { useVoiceCtx } from "../context/AppContext";
 
@@ -75,6 +75,16 @@ export function useVoice() {
   const voicesRef   = useRef([]);
   const queueRef    = useRef([]);
   const speakingRef = useRef(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  /* Cancel all speech on unmount to prevent voice continuing after navigation */
+  useEffect(() => {
+    return () => {
+      if (supported) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [supported]);
 
   /* Load voices – fires immediately if already loaded, else on event */
   useEffect(() => {
@@ -114,12 +124,17 @@ export function useVoice() {
       msg.lang  = picked.lang; // may be hi-IN for Marathi fallback
     }
 
+    msg.onstart = () => {
+      setIsSpeaking(true);
+    };
     msg.onend = () => {
       speakingRef.current = false;
+      setIsSpeaking(false);
       processQueue();
     };
     msg.onerror = () => {
       speakingRef.current = false;
+      setIsSpeaking(false);
       processQueue();
     };
 
@@ -142,13 +157,14 @@ export function useVoice() {
     [supported, voiceEnabled, processQueue]
   );
 
-  /* Public: stop() */
+  /* Public: stop() – immediately cancels all speech and clears queue */
   const stop = useCallback(() => {
     if (!supported) return;
     window.speechSynthesis.cancel();
     speakingRef.current = false;
     queueRef.current = [];
+    setIsSpeaking(false);
   }, [supported]);
 
-  return { speak, stop, voiceEnabled, toggleVoice, supported };
+  return { speak, stop, voiceEnabled, toggleVoice, supported, isSpeaking };
 }
