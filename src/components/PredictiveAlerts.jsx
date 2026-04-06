@@ -287,11 +287,8 @@ export default function PredictiveAlerts({
 
       {/* ── Expanded Panel ── */}
       {enabled && (
-        <div className="risk-panel" style={{
+        <div className="risk-panel glass" style={{
           marginTop: 8,
-          borderRadius: 12, border: "1px solid",
-          borderColor: darkMode ? "#30363d" : "#e1e8f0",
-          background: darkMode ? "#161b22" : "#ffffff",
           overflow: "hidden",
           animation: "fadeInDown 0.35s ease forwards",
         }}>

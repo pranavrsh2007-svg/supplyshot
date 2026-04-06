@@ -33,7 +33,7 @@ export default function Sidebar({ open }) {
 
   return (
     <aside
-      className={`sidebar ${open ? "open" : ""}`}
+      className={`sidebar glass-static ${open ? "open" : ""}`}
       style={{ display: open ? "block" : "none" }}
     >
       {sections.map(({ headingKey, items }) => (

@@ -110,7 +110,7 @@ export default function Stops() {
     <div style={{ height: "calc(100vh - 40px)", display: "flex", flexDirection: "column" }}>
       
       {/* ── 1. Timeline UI (Start -> Halt -> End) ── */}
-      <div className="card" style={{ padding: "16px 24px", marginBottom: 16 }}>
+      <div className="card glass" style={{ padding: "16px 24px", marginBottom: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
           📍 Journey Route
         </h2>
@@ -204,7 +204,7 @@ export default function Stops() {
               {visibleServices.map(service => {
                 const cat = POI_CATEGORIES.find(c => c.key === service.category);
                 return (
-                  <div key={service.id} className="card" style={{ padding: 14 }}>
+                  <div key={service.id} className="card glass" style={{ padding: 14 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{

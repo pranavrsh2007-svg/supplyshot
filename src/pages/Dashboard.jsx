@@ -99,7 +99,7 @@ export default function Dashboard() {
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
         {stats.map(({ labelKey, value, delta, icon: Icon, color }, i) => (
-          <div key={i} className="card stat-card">
+          <div key={i} className="card stat-card glass">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <p style={{ fontSize: 12, opacity: 0.6, fontWeight: 500, marginBottom: 8 }}>{t(labelKey)}</p>
@@ -122,15 +122,12 @@ export default function Dashboard() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
         {/* Driver card */}
         <div
-          className="card"
+          className="card glass"
           style={{
             padding: 20,
             display: "flex",
             alignItems: "center",
             gap: 18,
-            background: darkMode
-              ? "linear-gradient(135deg, #161b22, #1a2130)"
-              : "linear-gradient(135deg, #f0f6ff, #ffffff)",
           }}
         >
           <div
@@ -170,15 +167,12 @@ export default function Dashboard() {
 
         {/* Truck card */}
         <div
-          className="card"
+          className="card glass"
           style={{
             padding: 20,
             display: "flex",
             alignItems: "center",
             gap: 18,
-            background: darkMode
-              ? "linear-gradient(135deg, #161b22, #1a2130)"
-              : "linear-gradient(135deg, #f0f6ff, #ffffff)",
           }}
         >
           <div
@@ -224,7 +218,7 @@ export default function Dashboard() {
         {/* Left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Quick Actions */}
-          <div className="card" style={{ padding: 20 }}>
+          <div className="card glass" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{t("dashboard.quickActions")}</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
               {quickActions.map(({ icon: Icon, labelKey, to, color }) => (
@@ -256,7 +250,7 @@ export default function Dashboard() {
           </div>
 
           {/* Recent Routes */}
-          <div className="card" style={{ padding: 20 }}>
+          <div className="card glass" style={{ padding: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700 }}>{t("dashboard.recentRoutes")}</h3>
               <Link to="/planner" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none" }}>{t("dashboard.viewAll")}</Link>
@@ -292,7 +286,7 @@ export default function Dashboard() {
         {/* Right column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Alerts */}
-          <div className="card" style={{ padding: 20 }}>
+          <div className="card glass" style={{ padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
               <Activity size={16} color="#DC3545" />
               <h3 style={{ fontSize: 16, fontWeight: 700 }}>{t("dashboard.liveAlerts")}</h3>
@@ -317,7 +311,7 @@ export default function Dashboard() {
           </div>
 
           {/* Vehicle Status */}
-          <div className="card" style={{ padding: 20 }}>
+          <div className="card glass" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{t("dashboard.vehicleStatus")}</h3>
             {vehicleStatus.map(({ labelKey, value, color }) => (
               <div key={labelKey} style={{ marginBottom: 14 }}>

@@ -207,12 +207,12 @@ body {
   z-index: 900;
 }
 .light-mode .sidebar {
-  background: var(--sidebar-light);
-  border-color: var(--border-light);
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(225, 232, 240, 0.5);
 }
 .dark-mode .sidebar {
-  background: var(--sidebar-dark);
-  border-color: var(--border-dark);
+  background: rgba(14, 17, 23, 0.7);
+  border-color: rgba(48, 54, 61, 0.5);
 }
 
 .sidebar-link {
@@ -305,10 +305,85 @@ body {
   box-shadow: 0 8px 40px rgba(11,94,215,0.18), 0 2px 10px rgba(0,0,0,0.1);
 }
 
-/* Glassmorphism */
+/* ── Glassmorphism Design System ──────────────────────────────────────────────── */
 .glass {
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+.glass:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+.light-mode .glass {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(11, 94, 215, 0.06);
+}
+.light-mode .glass:hover {
+  box-shadow: 0 12px 40px rgba(11, 94, 215, 0.1);
+}
+.dark-mode .glass {
+  background: rgba(30, 30, 30, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+.dark-mode .glass:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Glass: No hover lift (for sidebar, panels that shouldn't float) */
+.glass-static {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.light-mode .glass-static {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+.dark-mode .glass-static {
+  background: rgba(14, 17, 23, 0.65);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Glass: Subtle variant for small navbar elements */
+.glass-subtle {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+.light-mode .glass-subtle {
+  background: rgba(11, 94, 215, 0.06);
+  border: 1px solid rgba(11, 94, 215, 0.1);
+}
+.dark-mode .glass-subtle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.glass-subtle:hover {
+  transform: translateY(-1px);
+}
+.light-mode .glass-subtle:hover {
+  background: rgba(11, 94, 215, 0.1);
+  box-shadow: 0 4px 16px rgba(11, 94, 215, 0.08);
+}
+.dark-mode .glass-subtle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Glass card grid spacing utility */
+.glass-grid {
+  display: grid;
+  gap: 16px;
 }
 
 /* Emergency pulse */

@@ -631,7 +631,7 @@ export default function Planner() {
               COLLAPSED ROUTE SUMMARY BAR: shown after route is planned
               ────────────────────────────────────────────────────────────────── */}
           {hasPlannedRoute && routeData && (
-            <div className="route-summary-bar card" style={{ padding: "14px 16px" }}>
+            <div className="route-summary-bar card glass" style={{ padding: "14px 16px" }}>
               {/* Route bar header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -732,14 +732,13 @@ export default function Planner() {
                 {ROUTE_META.map((rv, i) => (
                   <div
                     key={i}
-                    className="route-card"
+                    className="route-card glass"
                     onClick={() => {
                       setSelected(i);
                       speak(`${rv.name} selected. ${(routeData.distance * rv.distMult).toFixed(0)} kilometres, ${fmt(routeData.duration * rv.durationMult)}.`);
                     }}
                     style={{
-                      background: darkMode ? "#161b22" : "#ffffff",
-                      borderColor: selectedRoute === i ? rv.color : (darkMode ? "#30363d" : "#e1e8f0"),
+                      borderColor: selectedRoute === i ? rv.color : "transparent",
                       boxShadow: selectedRoute === i ? `0 4px 20px ${rv.color}30` : "none",
                       borderLeftWidth: 4,
                       borderLeftColor: rv.color,
@@ -785,7 +784,7 @@ export default function Planner() {
               </div>
 
               {/* ── Journey summary ── */}
-              <div className="card" style={{ padding: 14 }}>
+              <div className="card glass" style={{ padding: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Journey Summary</div>
                 <div style={{ display: "flex", gap: 16 }}>
                   {[
@@ -803,7 +802,7 @@ export default function Planner() {
 
               {/* ── Weather at stops ── */}
               {showWeather && allStops.length > 0 && (
-                <div className="card" style={{ padding: 16 }}>
+                <div className="card glass" style={{ padding: 16 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>
                     🌤️ Weather at Stops
                   </div>

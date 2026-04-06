@@ -16,7 +16,7 @@ export default function NearbyFilters({
   const anyActive = Object.values(filters).some(Boolean);
 
   return (
-    <div className="card" style={{ padding: 16 }}>
+    <div className="card glass" style={{ padding: 16 }}>
       {/* Header */}
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",

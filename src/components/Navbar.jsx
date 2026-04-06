@@ -154,21 +154,17 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
           onClick={() => setLangOpen(!langOpen)}
           aria-label="Change language"
           title={t("language.select")}
+          className="glass-subtle"
           style={{
             display: "flex",
             alignItems: "center",
             gap: 5,
-            background: darkMode
-              ? "rgba(255,255,255,0.08)"
-              : "rgba(11,94,215,0.08)",
             border: `1.5px solid ${langOpen ? "#0B5ED7" : darkMode ? "rgba(255,255,255,0.12)" : "#d1e0f0"}`,
-            borderRadius: "8px",
             padding: "6px 10px",
             cursor: "pointer",
             color: "inherit",
             fontSize: 13,
             fontWeight: 600,
-            transition: "all 0.2s",
           }}
         >
           <Globe size={14} color="#0B5ED7" />
@@ -258,12 +254,9 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
       <button
         onClick={toggleTheme}
         aria-label="Toggle theme"
+        className="glass-subtle"
         style={{
-          background: darkMode
-            ? "rgba(255,255,255,0.1)"
-            : "rgba(0,0,0,0.06)",
           border: "none",
-          borderRadius: "8px",
           padding: "8px",
           cursor: "pointer",
           color: "inherit",
@@ -282,14 +275,9 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
         <div ref={menuRef} style={{ position: "relative" }}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
+            className="glass-subtle"
             style={{
-              background: "none",
-              border: "1.5px solid",
-              borderColor: menuOpen
-                ? "#0B5ED7"
-                : darkMode
-                ? "rgba(255,255,255,0.15)"
-                : "#e1e8f0",
+              border: `1.5px solid ${menuOpen ? "#0B5ED7" : darkMode ? "rgba(255,255,255,0.15)" : "#e1e8f0"}`,
               borderRadius: 10,
               padding: "5px 10px 5px 5px",
               cursor: "pointer",
@@ -297,7 +285,6 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
               alignItems: "center",
               gap: 8,
               color: "inherit",
-              transition: "all 0.2s",
             }}
           >
             {/* Avatar */}

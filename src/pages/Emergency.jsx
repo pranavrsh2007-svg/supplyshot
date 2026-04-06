@@ -128,9 +128,9 @@ export default function Emergency() {
         </div>
 
         {sosActive && countdown === null && (
-          <div style={{
+          <div className="glass" style={{
             marginTop: 24, padding: "16px 24px", borderRadius: 14,
-            background: darkMode ? "rgba(220,53,69,0.15)" : "#fee2e2",
+            background: darkMode ? "rgba(220,53,69,0.15)" : "rgba(254, 226, 226, 0.6)",
             border: "1px solid #fecaca",
             maxWidth: 480, margin: "24px auto 0",
             animation: "fadeInUp 0.5s ease"
@@ -151,7 +151,7 @@ export default function Emergency() {
       </div>
 
       {/* How it works */}
-      <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+      <div className="card glass" style={{ padding: 24, marginBottom: 24 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>{t("emergency.howItWorks")}</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
           {steps.map(({ step, titleKey, descKey }) => (
@@ -180,7 +180,7 @@ export default function Emergency() {
         {emergencyContacts.map(({ nameKey, number, icon: Icon, color, descKey }, i) => (
           <div
             key={i}
-            className="card"
+            className="card glass"
             style={{ padding: 18, display: "flex", alignItems: "center", gap: 14 }}
           >
             <div style={{
