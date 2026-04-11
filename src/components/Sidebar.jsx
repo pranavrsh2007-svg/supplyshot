@@ -3,7 +3,7 @@ import { useTheme } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, Navigation, MapPin, AlertTriangle, Users,
-  Shield, Info, Phone, HelpCircle, User, Truck
+  Shield, Info, Phone, HelpCircle, User, Truck, BarChart2
 } from "lucide-react";
 
 export default function Sidebar({ open }) {
@@ -20,6 +20,7 @@ export default function Sidebar({ open }) {
     { path: "/risk-map", labelKey: "nav.riskMap", icon: Shield },
     { path: "/profile", labelKey: "nav.driverProfile", icon: User },
     { path: "/truck", labelKey: "nav.truckInfo", icon: Truck },
+    { path: "/trip-insights", labelKey: "nav.tripInsights", icon: BarChart2 },
     { path: "/about", labelKey: "nav.about", icon: Info },
     { path: "/contact", labelKey: "nav.contact", icon: Phone },
     { path: "/faq", labelKey: "nav.faq", icon: HelpCircle },
@@ -27,8 +28,8 @@ export default function Sidebar({ open }) {
 
   const sections = [
     { headingKey: "sidebar.main", items: links.slice(0, 6) },
-    { headingKey: "sidebar.myVehicle", items: links.slice(6, 8) },
-    { headingKey: "sidebar.more", items: links.slice(8) },
+    { headingKey: "sidebar.myVehicle", items: links.slice(6, 9) },
+    { headingKey: "sidebar.more", items: links.slice(9) },
   ];
 
   return (

@@ -1,11 +1,13 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { getNotifications } from "../api/notifications";
 
-const ThemeContext = createContext();
-const AuthContext  = createContext();
-const VoiceContext = createContext();
-const RouteContext = createContext();
+const ThemeContext         = createContext();
+const AuthContext          = createContext();
+const VoiceContext         = createContext();
+const RouteContext         = createContext();
+const NotificationsContext = createContext();
 
-/* ── Route Data ────────────────────────────────────────── */
+/* ── Route Data ────────────────────────────────────────────────────────────── */
 export function RouteProvider({ children }) {
   const [routeInfo, setRouteInfo] = useState({
     source: null,
@@ -32,7 +34,7 @@ export function RouteProvider({ children }) {
   );
 }
 
-/* ── Theme ─────────────────────────────────────────────── */
+/* ── Theme ─────────────────────────────────────────────────────────────────── */
 export function ThemeProvider({ children }) {
   const [darkMode, setDarkMode] = useState(() =>
     localStorage.getItem("theme") === "dark"
@@ -50,20 +52,22 @@ export function ThemeProvider({ children }) {
   );
 }
 
-/* ── Auth ───────────────────────────────────────────────── */
+/* ── Auth ───────────────────────────────────────────────────────────────────── */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("truckUser");
     return saved ? JSON.parse(saved) : null;
   });
 
-  const login = (userData) => {
+  const login = (userData, token) => {
     localStorage.setItem("truckUser", JSON.stringify(userData));
+    if (token) localStorage.setItem("truckToken", token);
     setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem("truckUser");
+    localStorage.removeItem("truckToken");
     setUser(null);
   };
 
@@ -74,7 +78,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-/* ── Global Voice Toggle ────────────────────────────────── */
+/* ── Global Voice Toggle ────────────────────────────────────────────────────── */
 export function VoiceProvider({ children }) {
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
     const stored = localStorage.getItem("truckVoice");
@@ -98,7 +102,40 @@ export function VoiceProvider({ children }) {
   );
 }
 
-export const useTheme = () => useContext(ThemeContext);
-export const useAuth  = () => useContext(AuthContext);
-export const useVoiceCtx = () => useContext(VoiceContext);
-export const useRoute = () => useContext(RouteContext);
+/* ── Notifications ──────────────────────────────────────────────────────────── */
+export function NotificationsProvider({ children }) {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount]     = useState(0);
+
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const { data } = await getNotifications();
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unreadCount || 0);
+    } catch {
+      // silently ignore — localStorage mock never fails
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, []);
+
+  // Poll every 30 seconds when user is logged in
+  useEffect(() => {
+    refreshNotifications();
+    const interval = setInterval(refreshNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [refreshNotifications]);
+
+  return (
+    <NotificationsContext.Provider value={{ notifications, unreadCount, refreshNotifications }}>
+      {children}
+    </NotificationsContext.Provider>
+  );
+}
+
+/* ── Hooks ──────────────────────────────────────────────────────────────────── */
+export const useTheme         = () => useContext(ThemeContext);
+export const useAuth          = () => useContext(AuthContext);
+export const useVoiceCtx      = () => useContext(VoiceContext);
+export const useRoute         = () => useContext(RouteContext);
+export const useNotifications = () => useContext(NotificationsContext);

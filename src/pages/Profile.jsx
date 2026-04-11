@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useTheme } from "../context/AppContext";
+import { useTheme, useAuth } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
+import DocumentManager from "../components/DocumentManager";
 import {
   User, Calendar, Phone, Mail, Clock, BarChart2, Truck,
-  Edit3, CheckCircle, MapPin, Star, Award, Camera
+  Edit3, CheckCircle, MapPin, Star, Award, Camera, TrendingUp, ShieldCheck, AlertTriangle, Zap,
 } from "lucide-react";
 
 const driverData = {
@@ -23,6 +24,7 @@ const driverData = {
 
 export default function Profile() {
   const { darkMode } = useTheme();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const [editMode, setEditMode] = useState(false);
   const [data, setData] = useState(driverData);
@@ -310,6 +312,92 @@ export default function Profile() {
             ✅ {t("profile.validLicense")}
           </span>
         </div>
+      </div>
+
+      {/* Driver Documents */}
+      <div className="card" style={{ padding: 24, marginTop: 20 }}>
+
+        {/* ── Performance Score ─── */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+            <h3 style={{ fontSize: 17, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+              <ShieldCheck size={18} color="#198754" /> Driver Performance Score
+            </h3>
+            <span style={{ padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg,#198754,#16a34a)", color: "white" }}>
+              Safe Driver ✅
+            </span>
+          </div>
+
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+            {/* Circular gauge */}
+            <div style={{ position: "relative", width: 120, height: 120, flexShrink: 0 }}>
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="50" fill="none" stroke={darkMode ? "#30363d" : "#e2e8f0"} strokeWidth="10" />
+                <circle
+                  cx="60" cy="60" r="50" fill="none"
+                  stroke="#198754" strokeWidth="10" strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 50 * 0.94} ${2 * Math.PI * 50 * 0.06}`}
+                  strokeDashoffset={2 * Math.PI * 50 * 0.25}
+                  transform="rotate(-90 60 60)"
+                />
+              </svg>
+              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 26, fontWeight: 900, fontFamily: "Outfit,sans-serif", color: "#198754" }}>94</span>
+                <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>/ 100</span>
+              </div>
+            </div>
+
+            {/* Behavior bars */}
+            <div style={{ flex: 1, minWidth: 200, display: "flex", flexDirection: "column", gap: 14 }}>
+              {[
+                { label: "Safety Score",    value: 94, color: "#198754", icon: ShieldCheck },
+                { label: "Speeding Events", value: 88, color: "#0B5ED7", note: "Low",  icon: Zap },
+                { label: "Harsh Braking",   value: 91, color: "#f59e0b", note: "Rare", icon: AlertTriangle },
+                { label: "Trip Completion", value: 97, color: "#8b5cf6",               icon: TrendingUp },
+              ].map(({ label, value, color, note, icon: Icon }) => (
+                <div key={label}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 12 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 600 }}>
+                      <Icon size={12} color={color} /> {label}
+                    </span>
+                    <span style={{ fontWeight: 700, color }}>{value}% {note && <span style={{ fontSize: 10, opacity: 0.7 }}>({note})</span>}</span>
+                  </div>
+                  <div style={{ height: 7, borderRadius: 4, background: darkMode ? "#30363d" : "#e2e8f0", overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 4, width: `${value}%`, background: `linear-gradient(90deg, ${color}, ${color}88)`, transition: "width 1s ease" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Insight badges */}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
+            {[
+              { label: "🌙 Safer at Night",          type: "green"  },
+              { label: "⚠️ Caution near City Zones", type: "yellow" },
+              { label: "📉 Fuel Efficiency Good",    type: "green"  },
+              { label: "🏆 Top 10% Driver",           type: "blue"   },
+            ].map(({ label, type }) => (
+              <span key={label} style={{
+                padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                background: type === "green" ? "rgba(25,135,84,0.12)" : type === "yellow" ? "rgba(245,158,11,0.12)" : "rgba(11,94,215,0.12)",
+                color: type === "green" ? "#198754" : type === "yellow" ? "#92400e" : "#0B5ED7",
+                border: `1px solid ${type === "green" ? "rgba(25,135,84,0.25)" : type === "yellow" ? "rgba(245,158,11,0.25)" : "rgba(11,94,215,0.25)"}`,
+              }}>
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: darkMode ? "#30363d" : "#e1e8f0", marginBottom: 24 }} />
+
+        <DocumentManager
+          linkedTo={user?.id}
+          linkedType="user"
+          title="Driver Documents"
+        />
       </div>
     </div>
   );

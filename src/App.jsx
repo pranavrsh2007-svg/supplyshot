@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { ThemeProvider, AuthProvider, VoiceProvider, RouteProvider, useTheme } from "./context/AppContext";
+import {
+  ThemeProvider, AuthProvider, VoiceProvider, RouteProvider,
+  NotificationsProvider, useTheme,
+} from "./context/AppContext";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 
@@ -19,6 +22,7 @@ import FAQ from "./pages/FAQ";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import TruckInfo from "./pages/TruckInfo";
+import TripInsights from "./pages/TripInsights";
 
 // Pages that DON'T use the sidebar layout
 const FULL_PAGES = ["/", "/auth"];
@@ -41,23 +45,24 @@ function AppLayout() {
           <main className="main-content" style={{ marginLeft: sidebarOpen ? 240 : 0 }}>
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/planner" element={<Planner />} />
-              <Route path="/stops" element={<Stops />} />
+              <Route path="/planner"   element={<Planner />} />
+              <Route path="/stops"     element={<Stops />} />
               <Route path="/emergency" element={<Emergency />} />
               <Route path="/community" element={<Community />} />
-              <Route path="/risk-map" element={<RiskMap />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/truck" element={<TruckInfo />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/risk-map"  element={<RiskMap />} />
+              <Route path="/profile"      element={<Profile />} />
+              <Route path="/truck"        element={<TruckInfo />} />
+              <Route path="/trip-insights" element={<TripInsights />} />
+              <Route path="/about"        element={<About />} />
+              <Route path="/contact"      element={<Contact />} />
+              <Route path="/faq"          element={<FAQ />} />
+              <Route path="*"             element={<NotFound />} />
             </Routes>
           </main>
         </div>
       ) : (
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route path="/"     element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
         </Routes>
       )}
@@ -72,7 +77,9 @@ export default function App() {
         <AuthProvider>
           <VoiceProvider>
             <RouteProvider>
-              <AppLayout />
+              <NotificationsProvider>
+                <AppLayout />
+              </NotificationsProvider>
             </RouteProvider>
           </VoiceProvider>
         </AuthProvider>

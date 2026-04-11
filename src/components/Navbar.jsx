@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useTheme, useAuth } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
+import NotificationDropdown from "./NotificationDropdown";
 import {
   Truck, Sun, Moon, Menu, X, LayoutDashboard, Navigation,
   MapPin, AlertTriangle, LogOut, LogIn, User, ChevronDown, Globe,
@@ -249,6 +250,9 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
           </div>
         )}
       </div>
+
+      {/* Notification Bell */}
+      <NotificationDropdown />
 
       {/* Theme toggle */}
       <button

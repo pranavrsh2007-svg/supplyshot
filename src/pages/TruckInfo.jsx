@@ -1,12 +1,16 @@
-import { useTheme } from "../context/AppContext";
+import { useState, useEffect } from "react";
+import { useTheme, useAuth } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
+import { getTruck, saveTruck } from "../api/trucks";
+import DocumentManager from "../components/DocumentManager";
+import TruckSVG from "../components/TruckSVG";
 import {
   Truck, Hash, Settings, Calendar, Shield,
   AlertTriangle, CheckCircle, Fuel, Weight,
-  Activity, Clock, FileText, RefreshCw,
+  Activity, Clock, FileText, RefreshCw, Loader2, Edit3,
 } from "lucide-react";
 
-const truckData = {
+const DEFAULT_TRUCK = {
   number: "MH12AB1234",
   type: "Trailer",
   capacity: "20 Tons",
@@ -22,11 +26,12 @@ const truckData = {
   insuranceExpiry: "2026-12-31",
   permit: "MH/NP/2026/78934",
   fitnessExpiry: "2027-01-15",
+  status: "operational",
 };
 
 function getServiceStatus(nextServiceDate) {
   const today = new Date();
-  const next = new Date(nextServiceDate);
+  const next  = new Date(nextServiceDate);
   const diffDays = Math.ceil((next - today) / (1000 * 60 * 60 * 24));
   return { overdue: diffDays <= 60, diffDays };
 }
@@ -37,142 +42,229 @@ function formatDate(dateStr) {
   });
 }
 
-const { overdue, diffDays } = getServiceStatus(truckData.nextService);
-
 export default function TruckInfo() {
   const { darkMode } = useTheme();
+  const { user } = useAuth();
   const { t } = useTranslation();
 
+  const [truckData, setTruckData] = useState(DEFAULT_TRUCK);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState(DEFAULT_TRUCK);
+  const [saveMsg, setSaveMsg] = useState("");
+
+  useEffect(() => {
+    getTruck()
+      .then(({ data }) => { setTruckData(data); setEditData(data); })
+      .catch(() => {}) // use local defaults if data unavailable
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data } = await saveTruck(editData);
+      setTruckData(data);
+      setEditData(data);
+      setEditMode(false);
+      setSaveMsg("Truck details saved!");
+      setTimeout(() => setSaveMsg(""), 3000);
+    } catch {
+      setSaveMsg("Save failed. Please try again.");
+      setTimeout(() => setSaveMsg(""), 4000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const { overdue, diffDays } = getServiceStatus(truckData.nextService || DEFAULT_TRUCK.nextService);
+
   const specs = [
-    { icon: Truck, label: "Make & Model", value: `${truckData.make} ${truckData.model}` },
-    { icon: Calendar, label: t("truck.year"), value: truckData.year },
-    { icon: Fuel, label: t("truck.fuel"), value: truckData.fuelType },
-    { icon: Weight, label: t("truck.capacity"), value: truckData.capacity },
-    { icon: Activity, label: "Odometer Reading", value: truckData.odometer },
-    { icon: FileText, label: "Permit Number", value: truckData.permit },
+    { icon: Truck,    label: "Make & Model", value: `${truckData.make} ${truckData.model}` },
+    { icon: Calendar, label: t("truck.year"),     value: truckData.year },
+    { icon: Fuel,     label: t("truck.fuel"),     value: truckData.fuelType },
+    { icon: Weight,   label: t("truck.capacity"), value: truckData.capacity },
+    { icon: Activity, label: "Odometer Reading",  value: truckData.odometer },
+    { icon: FileText, label: "Permit Number",     value: truckData.permit },
   ];
 
   const serviceDocs = [
     {
       label: "Last Service",
-      value: formatDate(truckData.lastService),
+      value: formatDate(truckData.lastService || DEFAULT_TRUCK.lastService),
       icon: RefreshCw, color: "#198754",
       badge: "Completed", badgeType: "green",
     },
     {
       label: "Next Service Due",
       icon: Settings,
-      value: formatDate(truckData.nextService),
-      color: getServiceStatus(truckData.nextService).overdue ? "#DC3545" : "#198754",
-      badge: getServiceStatus(truckData.nextService).overdue ? t("truck.serviceDue") : t("truck.goodCondition"),
-      badgeType: getServiceStatus(truckData.nextService).overdue ? "red" : "green",
+      value: formatDate(truckData.nextService || DEFAULT_TRUCK.nextService),
+      color: overdue ? "#DC3545" : "#198754",
+      badge: overdue ? t("truck.serviceDue") : t("truck.goodCondition"),
+      badgeType: overdue ? "red" : "green",
     },
     {
       label: "Insurance Status",
-      value: `${truckData.insurance} · Expires ${formatDate(truckData.insuranceExpiry)}`,
+      value: `${truckData.insurance} · Expires ${formatDate(truckData.insuranceExpiry || DEFAULT_TRUCK.insuranceExpiry)}`,
       icon: Shield, color: "#0B5ED7",
       badge: "Active", badgeType: "blue",
     },
     {
       label: "Fitness Certificate",
-      value: `Valid till ${formatDate(truckData.fitnessExpiry)}`,
+      value: `Valid till ${formatDate(truckData.fitnessExpiry || DEFAULT_TRUCK.fitnessExpiry)}`,
       icon: CheckCircle, color: "#8b5cf6",
       badge: "Valid", badgeType: "blue",
     },
   ];
 
+  const editableFields = [
+    { key: "number",   label: "Truck Number" },
+    { key: "type",     label: "Type" },
+    { key: "make",     label: "Make" },
+    { key: "model",    label: "Model" },
+    { key: "capacity", label: "Capacity" },
+    { key: "fuelType", label: "Fuel Type" },
+    { key: "year",     label: "Year" },
+    { key: "odometer", label: "Odometer" },
+  ];
+
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 className="section-heading" style={{ fontSize: 26, marginBottom: 4 }}>
-          🚚 {t("truck.title")}
-        </h1>
-        <p style={{ opacity: 0.6, fontSize: 14 }}>{t("truck.subtitle")}</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 className="section-heading" style={{ fontSize: 26, marginBottom: 4 }}>
+            🚚 {t("truck.title")}
+          </h1>
+          <p style={{ opacity: 0.6, fontSize: 14 }}>{t("truck.subtitle")}</p>
+        </div>
+        {!editMode ? (
+          <button
+            className="btn-primary"
+            onClick={() => setEditMode(true)}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", fontSize: 13 }}
+          >
+            <Edit3 size={15} /> Edit Details
+          </button>
+        ) : (
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              className="btn-success"
+              onClick={handleSave}
+              disabled={saving}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", fontSize: 13 }}
+            >
+              {saving ? <Loader2 size={15} style={{ animation: "spin 0.8s linear infinite" }} /> : <CheckCircle size={15} />}
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+            <button
+              onClick={() => { setEditMode(false); setEditData(truckData); }}
+              style={{
+                background: "none", border: `1.5px solid ${darkMode ? "#30363d" : "#e1e8f0"}`,
+                borderRadius: 10, padding: "10px 16px", cursor: "pointer",
+                color: "inherit", fontSize: 13, fontWeight: 600,
+              }}
+            >Cancel</button>
+          </div>
+        )}
       </div>
 
-      {/* Hero card */}
+      {saveMsg && (
+        <div style={{
+          padding: "10px 16px", borderRadius: 10, marginBottom: 16,
+          background: saveMsg.includes("failed") ? "#fee2e2" : "#d1fae5",
+          border: `1px solid ${saveMsg.includes("failed") ? "#fecaca" : "#bbf7d0"}`,
+          color: saveMsg.includes("failed") ? "#991b1b" : "#065f46",
+          fontSize: 13,
+        }}>
+          {saveMsg}
+        </div>
+      )}
+
+      {/* SVG Hero card */}
       <div className="card" style={{
         padding: 32, marginBottom: 24,
         background: darkMode
           ? "linear-gradient(135deg, #161b22 0%, #1a2130 100%)"
           : "linear-gradient(135deg, #ffffff 0%, #f0f6ff 100%)",
-        position: "relative", overflow: "hidden",
+        overflow: "hidden", position: "relative",
       }}>
-        <div style={{ position: "absolute", right: -30, top: -30, fontSize: 140, opacity: 0.04, pointerEvents: "none", userSelect: "none" }}>
-          🚛
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 20, position: "relative" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
+          {/* Left: info */}
+          <div>
             <div style={{
-              width: 80, height: 80, borderRadius: 18,
-              background: "linear-gradient(135deg, #0B5ED7, #0847b0)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 8px 24px rgba(11,94,215,0.35)", flexShrink: 0,
+              display: "inline-block",
+              background: darkMode ? "#1e262f" : "#fff",
+              border: "2px solid", borderColor: "#0B5ED7",
+              borderRadius: 8, padding: "4px 16px", marginBottom: 8,
+              fontFamily: "Outfit, sans-serif", letterSpacing: 3,
+              fontWeight: 800, fontSize: 22, color: "#0B5ED7",
             }}>
-              <Truck size={38} color="white" />
+              {truckData.number}
             </div>
-            <div>
-              <div style={{
-                display: "inline-block",
-                background: darkMode ? "#1e262f" : "#fff",
-                border: "2px solid", borderColor: "#0B5ED7",
-                borderRadius: 8, padding: "4px 16px", marginBottom: 8,
-                fontFamily: "Outfit, sans-serif", letterSpacing: 3,
-                fontWeight: 800, fontSize: 22, color: "#0B5ED7",
-              }}>
-                {truckData.number}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 16, fontWeight: 600, opacity: 0.85 }}>
-                  {truckData.type} &nbsp;·&nbsp; {truckData.make}
-                </span>
-                <span className="badge badge-green" style={{ fontSize: 12 }}>
-                  <CheckCircle size={11} /> {t("truck.operational")}
-                </span>
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 16, fontWeight: 600, opacity: 0.85 }}>
+                {truckData.type} &nbsp;·&nbsp; {truckData.make}
+              </span>
+              <span className="badge badge-green" style={{ fontSize: 12 }}>
+                <CheckCircle size={11} /> {t("truck.operational")}
+              </span>
+            </div>
+
+            {/* Service status */}
+            <div style={{ marginTop: 16 }}>
+              {overdue ? (
+                <div style={{
+                  padding: "12px 18px", borderRadius: 12,
+                  background: "#fee2e2", border: "1.5px solid #fecaca",
+                  display: "flex", alignItems: "center", gap: 10, maxWidth: 320,
+                }}>
+                  <AlertTriangle size={20} color="#DC3545" />
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#991b1b", fontSize: 14 }}>{t("truck.serviceDue")}</div>
+                    <div style={{ fontSize: 12, color: "#b91c1c" }}>
+                      {t("truck.dueIn")} {diffDays} {diffDays !== 1 ? t("truck.days") : t("truck.day")}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  padding: "12px 18px", borderRadius: 12,
+                  background: darkMode ? "rgba(25,135,84,0.12)" : "#f0fdf4",
+                  border: "1.5px solid", borderColor: darkMode ? "rgba(25,135,84,0.3)" : "#bbf7d0",
+                  display: "flex", alignItems: "center", gap: 10, maxWidth: 320,
+                }}>
+                  <CheckCircle size={20} color="#198754" />
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#198754", fontSize: 14 }}>{t("truck.goodCondition")}</div>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>{t("truck.nextServiceIn")} {diffDays} {t("truck.days")}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Service status alert */}
-          {overdue ? (
-            <div style={{
-              padding: "14px 20px", borderRadius: 12,
-              background: "#fee2e2", border: "1.5px solid #fecaca",
-              display: "flex", alignItems: "center", gap: 10,
-            }}>
-              <AlertTriangle size={20} color="#DC3545" />
-              <div>
-                <div style={{ fontWeight: 700, color: "#991b1b", fontSize: 14 }}>{t("truck.serviceDue")}</div>
-                <div style={{ fontSize: 12, color: "#b91c1c" }}>
-                  {t("truck.dueIn")} {diffDays} {diffDays !== 1 ? t("truck.days") : t("truck.day")}
-                </div>
+          {/* Right: SVG illustration */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {loading ? (
+              <div style={{ width: 260, height: 130, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3 }}>
+                <Loader2 size={32} style={{ animation: "spin 0.8s linear infinite" }} />
               </div>
-            </div>
-          ) : (
-            <div style={{
-              padding: "14px 20px", borderRadius: 12,
-              background: darkMode ? "rgba(25,135,84,0.12)" : "#f0fdf4",
-              border: "1.5px solid", borderColor: darkMode ? "rgba(25,135,84,0.3)" : "#bbf7d0",
-              display: "flex", alignItems: "center", gap: 10,
-            }}>
-              <CheckCircle size={20} color="#198754" />
-              <div>
-                <div style={{ fontWeight: 700, color: "#198754", fontSize: 14 }}>{t("truck.goodCondition")}</div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>{t("truck.nextServiceIn")} {diffDays} {t("truck.days")}</div>
-              </div>
-            </div>
-          )}
+            ) : (
+              <TruckSVG size={260} status={overdue ? "service_due" : "operational"} />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16, marginBottom: 24 }}>
         {[
-          { labelKey: "truck.truckType", value: truckData.type, icon: Truck, color: "#0B5ED7" },
-          { labelKey: "truck.capacity", value: truckData.capacity, icon: Weight, color: "#198754" },
-          { labelKey: "truck.year", value: truckData.year, icon: Calendar, color: "#8b5cf6" },
-          { labelKey: "truck.fuel", value: truckData.fuelType, icon: Fuel, color: "#f59e0b" },
+          { labelKey: "truck.truckType", value: truckData.type,     icon: Truck,    color: "#0B5ED7" },
+          { labelKey: "truck.capacity",  value: truckData.capacity,  icon: Weight,   color: "#198754" },
+          { labelKey: "truck.year",      value: truckData.year,      icon: Calendar, color: "#8b5cf6" },
+          { labelKey: "truck.fuel",      value: truckData.fuelType,  icon: Fuel,     color: "#f59e0b" },
         ].map(({ labelKey, value, icon: Icon, color }) => (
           <div key={labelKey} className="card" style={{ padding: 20, textAlign: "center" }}>
             <div style={{
@@ -182,27 +274,48 @@ export default function TruckInfo() {
             }}>
               <Icon size={20} color={color} />
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "Outfit, sans-serif", marginBottom: 4 }}>
-              {value}
-            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "Outfit, sans-serif", marginBottom: 4 }}>{value}</div>
             <div style={{ fontSize: 12, opacity: 0.65 }}>{t(labelKey)}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      {/* Edit form — shown in edit mode */}
+      {editMode && (
+        <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Edit Truck Details</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+            {editableFields.map(({ key, label }) => (
+              <div key={key}>
+                <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", opacity: 0.55, display: "block", marginBottom: 6 }}>
+                  {label}
+                </label>
+                <input
+                  className="input-field"
+                  value={editData[key] || ""}
+                  onChange={(e) => setEditData({ ...editData, [key]: e.target.value })}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
         {/* Specifications */}
         <div className="card" style={{ padding: 24 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 18 }}>{t("truck.vehicleSpecs")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {specs.map(({ icon: Icon, label, value }) => (
-              <div key={label} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 14px", borderRadius: 10,
-                border: "1px solid", borderColor: darkMode ? "#30363d" : "#e8eef6",
-                transition: "all 0.2s ease",
-                background: darkMode ? "rgba(255,255,255,0.02)" : "#fafbff",
-              }}
+              <div
+                key={label}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "12px 14px", borderRadius: 10,
+                  border: "1px solid", borderColor: darkMode ? "#30363d" : "#e8eef6",
+                  transition: "all 0.2s ease",
+                  background: darkMode ? "rgba(255,255,255,0.02)" : "#fafbff",
+                }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0B5ED7"; e.currentTarget.style.background = darkMode ? "rgba(11,94,215,0.08)" : "#eff6ff"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = darkMode ? "#30363d" : "#e8eef6"; e.currentTarget.style.background = darkMode ? "rgba(255,255,255,0.02)" : "#fafbff"; }}
               >
@@ -223,11 +336,13 @@ export default function TruckInfo() {
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 18 }}>{t("truck.serviceDocs")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {serviceDocs.map(({ label, value, icon: Icon, color, badge, badgeType }) => (
-              <div key={label} style={{
-                padding: 16, borderRadius: 12,
-                border: "1.5px solid", borderColor: darkMode ? "#30363d" : "#e8eef6",
-                transition: "all 0.25s", background: darkMode ? "rgba(255,255,255,0.02)" : "#fafbff",
-              }}
+              <div
+                key={label}
+                style={{
+                  padding: 16, borderRadius: 12,
+                  border: "1.5px solid", borderColor: darkMode ? "#30363d" : "#e8eef6",
+                  transition: "all 0.25s", background: darkMode ? "rgba(255,255,255,0.02)" : "#fafbff",
+                }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = color; e.currentTarget.style.boxShadow = `0 0 0 3px ${color}15`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = darkMode ? "#30363d" : "#e8eef6"; e.currentTarget.style.boxShadow = "none"; }}
               >
@@ -245,9 +360,9 @@ export default function TruckInfo() {
         </div>
       </div>
 
-      {/* Truck number plate banner */}
+      {/* Registration banner */}
       <div className="card" style={{
-        marginTop: 20, padding: "24px 28px",
+        marginBottom: 28, padding: "24px 28px",
         background: "linear-gradient(135deg, #0d1117, #1a2130)",
         border: "1.5px solid #30363d",
         display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16,
@@ -271,6 +386,15 @@ export default function TruckInfo() {
             <CheckCircle size={12} /> {t("truck.registered")}
           </span>
         </div>
+      </div>
+
+      {/* Document Management */}
+      <div className="card" style={{ padding: 24 }}>
+        <DocumentManager
+          linkedTo={truckData._id || user?.id}
+          linkedType="truck"
+          title="Truck Documents"
+        />
       </div>
     </div>
   );

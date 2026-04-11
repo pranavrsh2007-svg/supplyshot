@@ -119,16 +119,16 @@ function WeatherCard({ location, label, darkMode }) {
 async function fetchOSRM(waypoints) {
   const coords = waypoints.map((p) => `${p.lon},${p.lat}`).join(";");
   const baseUrl = import.meta.env.VITE_OSRM_API_URL || "https://router.project-osrm.org/route/v1/driving";
-  const url    = `${baseUrl}/${coords}?overview=full&geometries=geojson`;
+  const url    = `${baseUrl}/${coords}?overview=full&geometries=geojson&alternatives=true`;
   const res    = await fetch(url);
   const data   = await res.json();
   if (data.code !== "Ok" || !data.routes?.length) throw new Error("Route not found");
-  const route  = data.routes[0];
-  return {
+  
+  return data.routes.map(route => ({
     coords:   route.geometry.coordinates.map(([lon, lat]) => [lat, lon]),
     distance: route.distance / 1000,
     duration: route.duration,
-  };
+  }));
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -150,6 +150,8 @@ export default function Planner() {
   const [clickMode,      setClickMode]   = useState(null);
   const [showWeather,    setShowWeather] = useState(false);
   const [riskSegments,   setRiskSegments] = useState([]);
+  const [warningsCollapsed, setWarningsCollapsed] = useState(true);
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
   // ── AI-first state ──────────────────────────────────────────────────────────
   const [hasPlannedRoute, setHasPlannedRoute] = useState(false);
   const resultsRef = useRef(null);
@@ -291,16 +293,19 @@ export default function Planner() {
     // Cancel any previous voice before starting new route alerts
     stop();
 
-    let base;
+    let rawRoutes;
     try {
-      base = await fetchOSRM(waypoints);
+      rawRoutes = await fetchOSRM(waypoints);
+      const baseMain = rawRoutes[0];
+      const baseAlt = rawRoutes.length > 1 ? rawRoutes[1] : rawRoutes[0];
 
       const routes = ROUTE_META.map((m, i) => {
         const isSelected = selectedRoute === i;
+        const currentBase = i === 1 ? baseAlt : baseMain;
         return {
-          coords:   base.coords,
-          distance: (base.distance * m.distMult).toFixed(1),
-          duration: base.duration * m.durationMult,
+          coords:   currentBase.coords,
+          distance: (currentBase.distance * m.distMult).toFixed(1),
+          duration: currentBase.duration * m.durationMult,
           color:    m.color,
           weight:   isSelected ? 8 : m.weight,
           opacity:  isSelected ? 1 : m.opacity,
@@ -308,12 +313,14 @@ export default function Planner() {
         };
       });
 
+      const activeRoute = routes[selectedRoute] || routes[0];
+
       // Use a stable object — same shape each time to avoid useMemo instability downstream
       const newRouteData = {
-        distance: base.distance.toFixed(1),
-        duration: base.duration,
+        distance: activeRoute.distance,
+        duration: activeRoute.duration,
         waypoints: validHalts.length,
-        baseCoords: base.coords,
+        baseCoords: activeRoute.coords,
       };
 
       setRouteData(newRouteData);
@@ -325,7 +332,7 @@ export default function Planner() {
         source,
         destination,
         halts: validHalts,
-        routeCoords: base.coords,
+        routeCoords: activeRoute.coords,
       });
 
       // Scroll to AI results panel smoothly
@@ -358,9 +365,10 @@ export default function Planner() {
     }
 
     // ── Fetch nearby places (non-blocking) ──────────────────────────────────
-    if (validHalts.length > 0 && base) {
+    if (validHalts.length > 0 && rawRoutes) {
+      const activeBaseCoords = rawRoutes[0].coords;
       setNearbyServicesLoading(true);
-      fetchNearbyServices(validHalts, base.coords)
+      fetchNearbyServices(validHalts, activeBaseCoords)
         .then((services) => {
           setNearbyServices(services);
         })
@@ -374,13 +382,23 @@ export default function Planner() {
     }
   }, [source, destination, halts, speak, stop, selectedRoute, setRouteInfo, setNearbyServices, setNearbyServicesLoading, t]);
 
-  // Update route line weights when selectedRoute changes (no loop risk — only dep on selectedRoute)
+  // Update route line weights and active route data when selectedRoute changes
   useEffect(() => {
     if (allRoutes.length === 0) return;
+    
+    let activeRouteCoords = null;
+    let activeDistance = null;
+    let activeDuration = null;
+
     setAllRoutes((prev) =>
       prev.map((r, i) => {
         const isSelected = selectedRoute === i;
         const m = ROUTE_META[i];
+        if (isSelected) {
+          activeRouteCoords = r.coords;
+          activeDistance = r.distance;
+          activeDuration = r.duration;
+        }
         return {
           ...r,
           weight:  isSelected ? 8 : m.weight,
@@ -388,6 +406,16 @@ export default function Planner() {
         };
       })
     );
+
+    setRouteData((prev) => {
+      if (!prev || !activeRouteCoords) return prev;
+      return {
+        ...prev,
+        distance: activeDistance,
+        duration: activeDuration,
+        baseCoords: activeRouteCoords,
+      };
+    });
   }, [selectedRoute]);
 
   const toggleClickMode = (mode) =>
@@ -509,10 +537,10 @@ export default function Planner() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: 20, alignItems: "start" }}>
+      <div className="route-layout" style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: 20, alignItems: "start", height: "calc(100vh - 80px)" }}>
 
         {/* ════ LEFT PANEL ════ */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="route-sidebar" style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%", overflowY: "auto", paddingRight: 4, paddingBottom: 20 }}>
 
           {/* ──────────────────────────────────────────────────────────────────
               FORM VIEW: shown only before route is planned
@@ -628,66 +656,77 @@ export default function Planner() {
           )}
 
           {/* ──────────────────────────────────────────────────────────────────
-              COLLAPSED ROUTE SUMMARY BAR: shown after route is planned
-              ────────────────────────────────────────────────────────────────── */}
-          {hasPlannedRoute && routeData && (
-            <div className="route-summary-bar card glass" style={{ padding: "14px 16px" }}>
-              {/* Route bar header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <ShieldCheck size={16} color="#198754" />
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>Route Planned ✅</span>
-                </div>
-                <button
-                  onClick={handleEditRoute}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 5,
-                    padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                    background: darkMode ? "rgba(11,94,215,0.12)" : "#eff6ff",
-                    border: "1px solid #bfdbfe", color: "#0B5ED7", cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  <Edit2 size={12} /> Edit Route
-                </button>
-              </div>
-              {/* Compact stats */}
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, background: darkMode ? "rgba(255,255,255,0.05)" : "#f8faff", fontSize: 12, fontWeight: 600 }}>
-                  📍 {source?.name?.split(",")[0]} → {destination?.name?.split(",")[0]}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, background: darkMode ? "rgba(255,255,255,0.05)" : "#f8faff", fontSize: 12, fontWeight: 600, color: "#0B5ED7" }}>
-                  📏 {routeData.distance} km
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, background: darkMode ? "rgba(255,255,255,0.05)" : "#f8faff", fontSize: 12, fontWeight: 600, color: "#198754" }}>
-                  ⏱️ {fmt(routeData.duration)}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Loading state */}
-          {loading && (
-            <div className="card" style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-              <div className="loading-spinner" />
-              <div style={{ fontSize: 13, fontWeight: 600, opacity: 0.7 }}>
-                🧠 AI is analyzing your route…
-              </div>
-              <div style={{ fontSize: 11, opacity: 0.5 }}>Checking weather, risk zones, nearby services…</div>
-            </div>
-          )}
-
-          {/* ──────────────────────────────────────────────────────────────────
-              AI RESULTS PANEL (shown after route is planned)
-              Order: 1) Predictive Alerts  2) Route Options  3) Nearby filters
+              ROUTE RESULTS (Compact UI)
               ────────────────────────────────────────────────────────────────── */}
           {hasPlannedRoute && routeData && (
             <div
               ref={resultsRef}
               className="route-results"
-              style={{ display: "flex", flexDirection: "column", gap: 14, animation: "fadeInUp 0.5s ease forwards" }}
+              style={{ display: "flex", flexDirection: "column", gap: 10, animation: "fadeInUp 0.5s ease forwards" }}
             >
-              {/* ── 1. STICKY HIGH-RISK ALERT BANNER (TOP PRIORITY) ── */}
+              {/* ── Route Summary + Toggle ── */}
+              <div className="route-summary-bar card glass" style={{ padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <ShieldCheck size={16} color="#198754" />
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>Route Planned ✅</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12, fontWeight: 600 }}>
+                      <span style={{ opacity: 0.7 }}>📍 {source?.name?.split(",")[0]} → {destination?.name?.split(",")[0]}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleEditRoute}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 5,
+                      padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: darkMode ? "rgba(11,94,215,0.12)" : "#eff6ff",
+                      border: "1px solid #bfdbfe", color: "#0B5ED7", cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <Edit2 size={12} /> Edit
+                  </button>
+                </div>
+
+                {/* Compact Toggle */}
+                <div style={{ display: "flex", background: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)", borderRadius: 10, padding: 4, marginBottom: 12, width: "fit-content" }}>
+                  <button 
+                    onClick={() => { setSelected(0); speak(`Fastest route selected.`); }}
+                    style={{
+                      padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
+                      background: selectedRoute === 0 ? (darkMode ? "#1e262f" : "white") : "transparent",
+                      color: selectedRoute === 0 ? "#0B5ED7" : "inherit",
+                      boxShadow: selectedRoute === 0 ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
+                      display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s",
+                    }}
+                  >⚡ Fastest</button>
+                  <button 
+                    onClick={() => { setSelected(1); speak(`Safest route selected.`); }}
+                    style={{
+                      padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
+                      background: selectedRoute === 1 ? (darkMode ? "#1e262f" : "white") : "transparent",
+                      color: selectedRoute === 1 ? "#198754" : "inherit",
+                      boxShadow: selectedRoute === 1 ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
+                      display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s",
+                    }}
+                  >🛡 Safest</button>
+                </div>
+
+                {/* Inline Comparison Stats */}
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: selectedRoute === 0 ? "#0B5ED7" : "#198754" }}>
+                    {selectedRoute === 0 ? "⚡" : "🛡"} 
+                    {Math.round(routeData.distance)} km • {fmt(routeData.duration)}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, opacity: 0.6 }}>
+                    ({allStops.length - 2} halts)
+                  </div>
+                </div>
+              </div>
+
+              {/* ── STICKY HIGH-RISK ALERT BANNER ── */}
               {highRiskCount > 0 && (
                 <div className="alert-banner" style={{
                   padding: "10px 16px", borderRadius: 10,
@@ -699,11 +738,10 @@ export default function Planner() {
                 }}>
                   <AlertTriangle size={17} style={{ flexShrink: 0 }} />
                   <span>⚠️ {highRiskCount} High Risk Zone{highRiskCount > 1 ? "s" : ""} Detected on Route!</span>
-                  <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, opacity: 0.8 }}>Review alerts below ↓</span>
                 </div>
               )}
 
-              {/* ── 2. PREDICTIVE RISK ALERTS (TOP) ── */}
+              {/* ── PREDICTIVE RISK ALERTS ── */}
               <PredictiveAlerts
                 stops={allStops}
                 durationSecs={routeData.duration}
@@ -714,110 +752,90 @@ export default function Planner() {
                 onSegmentsReady={handleSegmentsReady}
               />
 
-              {/* ── 3. ROUTE OPTIONS ── */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {/* Legend */}
-                <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.5px", paddingLeft: 2 }}>
-                  🗺️ Route Options
+              {/* ── 🔊 Smart Alerts (Compact) ── */}
+              <div className="card glass" style={{ padding: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
+                  🔊 Live Alerts
                 </div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, fontWeight: 600, padding: "4px 2px" }}>
-                  {ROUTE_META.map((m, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <div style={{ width: 24, height: 4, borderRadius: 2, background: m.color }} />
-                      <span style={{ opacity: 0.7 }}>{m.tag}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {ROUTE_META.map((rv, i) => (
-                  <div
-                    key={i}
-                    className="route-card glass"
-                    onClick={() => {
-                      setSelected(i);
-                      speak(`${rv.name} selected. ${(routeData.distance * rv.distMult).toFixed(0)} kilometres, ${fmt(routeData.duration * rv.durationMult)}.`);
-                    }}
-                    style={{
-                      borderColor: selectedRoute === i ? rv.color : "transparent",
-                      boxShadow: selectedRoute === i ? `0 4px 20px ${rv.color}30` : "none",
-                      borderLeftWidth: 4,
-                      borderLeftColor: rv.color,
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{rv.name}</div>
-                        {rv.recommended && <span className="badge badge-green" style={{ fontSize: 10 }}>⭐ Recommended</span>}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        {selectedRoute === i && <CheckCircle size={14} color={rv.color} />}
-                        <span style={{ fontSize: 18 }}>{rv.emoji}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
-                      {[
-                        { label: "Distance", val: `${(routeData.distance * rv.distMult).toFixed(0)} km` },
-                        { label: "Duration", val: fmt(routeData.duration * rv.durationMult) },
-                        (() => {
-                          const dynSafety = riskSegments.length > 0
-                            ? Math.round(100 - (riskSegments.reduce((s, r) => s + r.riskScore, 0) / riskSegments.length))
-                            : rv.safetyScore;
-                          const sc = dynSafety >= 70 ? "#198754" : dynSafety >= 50 ? "#f59e0b" : "#DC3545";
-                          return { label: "Safety", val: `🛡 ${dynSafety}`, color: sc };
-                        })(),
-                      ].map(({ label, val, color }) => (
-                        <div key={label} style={{ textAlign: "center" }}>
-                          <div style={{ fontSize: 13, fontWeight: 800, color }}>{val}</div>
-                          <div style={{ fontSize: 10, opacity: 0.55 }}>{label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {rv.alerts.map((a, j) => (
-                      <div key={j} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 5, opacity: 0.65 }}>
-                        <AlertTriangle size={10} color="#f59e0b" /> {a}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              {/* ── Journey summary ── */}
-              <div className="card glass" style={{ padding: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Journey Summary</div>
-                <div style={{ display: "flex", gap: 16 }}>
-                  {[
-                    { label: "Total Stops", val: `${allStops.length - 2} halt${allStops.length - 2 !== 1 ? "s" : ""}`, emoji: "📍" },
-                    { label: "Distance", val: `${routeData.distance} km`, emoji: "📏" },
-                    { label: "Drive Time", val: fmt(routeData.duration), emoji: "⏱️" },
-                  ].map(({ label, val, emoji }) => (
-                    <div key={label} style={{ textAlign: "center", flex: 1 }}>
-                      <div style={{ fontSize: 16, fontWeight: 800 }}>{emoji} {val}</div>
-                      <div style={{ fontSize: 10, opacity: 0.55 }}>{label}</div>
-                    </div>
-                  ))}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  {(() => {
+                    const allLiveAlerts = [
+                      { icon: "⚠️", text: "Traffic", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+                      { icon: "🛑", text: "Risk", color: "#DC3545", bg: "rgba(220,53,69,0.1)"   },
+                      { icon: "⛽", text: "Fuel 2km", color: "#0B5ED7", bg: "rgba(11,94,215,0.1)"  },
+                      { icon: "🚧", text: "Roadwork", color: "#F97316", bg: "rgba(249,115,22,0.1)"  },
+                      { icon: "🌧️", text: "Rain", color: "#0B5ED7", bg: "rgba(11,94,215,0.1)"  },
+                    ];
+                    const visibleAlerts = showAllAlerts ? allLiveAlerts : allLiveAlerts.slice(0, 3);
+                    return (
+                      <>
+                        {visibleAlerts.map(({ icon, text, color, bg }) => (
+                          <div key={text} style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            padding: "6px 12px", borderRadius: 16,
+                            background: bg, border: `1px solid ${color}40`,
+                            fontSize: 12, fontWeight: 700, color,
+                          }}>
+                            <span>{icon}</span> {text}
+                          </div>
+                        ))}
+                        <button 
+                          onClick={() => setShowAllAlerts(prev => !prev)}
+                          style={{ background: "transparent", border: "none", color: "#0B5ED7", fontSize: 11, fontWeight: 600, cursor: "pointer", marginLeft: "auto" }}
+                        >
+                          {showAllAlerts ? "Show Less" : "View all"}
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
-              {/* ── Weather at stops ── */}
-              {showWeather && allStops.length > 0 && (
-                <div className="card glass" style={{ padding: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>
-                    🌤️ Weather at Stops
+              {/* ── 📍 Route Warnings Panel (Collapsible) ── */}
+              <div className="card glass" style={{ padding: 12 }}>
+                <div 
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: warningsCollapsed ? 0 : 10 }}
+                  onClick={() => setWarningsCollapsed(prev => !prev)}
+                >
+                  <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    📍 Route Warnings
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {allStops.map((stop, i) => (
-                      <WeatherCard
-                        key={i}
-                        location={stop}
-                        label={i === 0 ? "Start" : i === allStops.length - 1 ? "End" : `Halt ${i}`}
-                        darkMode={darkMode}
-                      />
-                    ))}
-                  </div>
+                  {warningsCollapsed ? <ChevronDown size={14} opacity={0.6} /> : <ChevronUp size={14} opacity={0.6} />}
                 </div>
-              )}
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(() => {
+                    const allWarnings = [
+                      { icon: "🛣️", label: "Toll Booths",   count: 4, color: "#f59e0b" },
+                      { icon: "🚦", label: "Traffic Zones", count: 2, color: "#DC3545" },
+                      { icon: "⚠️", label: "Risk Zones",    count: 3, color: "#DC3545" },
+                    ];
+                    const visibleWarnings = warningsCollapsed ? allWarnings.slice(0, 2) : allWarnings;
+                    
+                    return visibleWarnings.map(({ icon, label, count, color }) => (
+                      <div key={label} style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "8px 12px", borderRadius: 8,
+                        background: darkMode ? "rgba(255,255,255,0.03)" : "#f8faff",
+                        border: `1px solid ${darkMode ? "#30363d" : "#e1e8f0"}`,
+                      }}>
+                        <span style={{ fontSize: 14 }}>{icon}</span>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{label}</div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color }}>({count})</span>
+                      </div>
+                    ));
+                  })()}
+                  
+                  {warningsCollapsed && (
+                    <div 
+                      onClick={() => setWarningsCollapsed(false)}
+                      style={{ fontSize: 11, fontWeight: 700, color: "#0B5ED7", textAlign: "center", cursor: "pointer", marginTop: 4, padding: "4px" }}
+                    >
+                      + 1 more warning
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* ── 4. NEARBY SERVICES FILTERS ── */}
               {haltLocations.length > 0 && (
@@ -848,13 +866,13 @@ export default function Planner() {
         </div>
 
         {/* ════ MAP ════ */}
-        <div>
+        <div className="map-container" style={{ height: "100%", position: "relative" }}>
           <LeafletMap
             source={source}
             destination={destination}
             halts={haltLocations}
             allRoutes={allRoutes}
-            height="calc(100vh - 180px)"
+            height="100%"
             clickMode={clickMode}
             onMapClick={handleMapClick}
             onRouteClick={setSelected}
