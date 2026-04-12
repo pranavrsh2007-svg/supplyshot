@@ -130,9 +130,9 @@ export default function TruckInfo() {
   ];
 
   return (
-    <div>
+    <div className="section" style={{ maxWidth: "100%", overflowX: "hidden" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+      <div className="section" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 className="section-heading" style={{ fontSize: 26, marginBottom: 4 }}>
             🚚 {t("truck.title")}
@@ -183,8 +183,7 @@ export default function TruckInfo() {
       )}
 
       {/* SVG Hero card */}
-      <div className="card" style={{
-        padding: 32, marginBottom: 24,
+      <div className="card section truck-banner" style={{
         background: darkMode
           ? "linear-gradient(135deg, #161b22 0%, #1a2130 100%)"
           : "linear-gradient(135deg, #ffffff 0%, #f0f6ff 100%)",
@@ -259,14 +258,14 @@ export default function TruckInfo() {
       </div>
 
       {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16, marginBottom: 24 }}>
+      <div className="card-grid section">
         {[
           { labelKey: "truck.truckType", value: truckData.type,     icon: Truck,    color: "#0B5ED7" },
           { labelKey: "truck.capacity",  value: truckData.capacity,  icon: Weight,   color: "#198754" },
           { labelKey: "truck.year",      value: truckData.year,      icon: Calendar, color: "#8b5cf6" },
           { labelKey: "truck.fuel",      value: truckData.fuelType,  icon: Fuel,     color: "#f59e0b" },
         ].map(({ labelKey, value, icon: Icon, color }) => (
-          <div key={labelKey} className="card" style={{ padding: 20, textAlign: "center" }}>
+          <div key={labelKey} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 100, textAlign: "center" }}>
             <div style={{
               width: 44, height: 44, borderRadius: 12,
               background: `${color}18`, display: "flex",
@@ -282,7 +281,7 @@ export default function TruckInfo() {
 
       {/* Edit form — shown in edit mode */}
       {editMode && (
-        <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+        <div className="card section">
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Edit Truck Details</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
             {editableFields.map(({ key, label }) => (
@@ -301,9 +300,9 @@ export default function TruckInfo() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+      <div className="section responsive-split" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-md)" }}>
         {/* Specifications */}
-        <div className="card" style={{ padding: 24 }}>
+        <div className="card">
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 18 }}>{t("truck.vehicleSpecs")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {specs.map(({ icon: Icon, label, value }) => (
@@ -332,7 +331,7 @@ export default function TruckInfo() {
         </div>
 
         {/* Service & Documents */}
-        <div className="card" style={{ padding: 24 }}>
+        <div className="card">
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 18 }}>{t("truck.serviceDocs")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {serviceDocs.map(({ label, value, icon: Icon, color, badge, badgeType }) => (
@@ -361,8 +360,7 @@ export default function TruckInfo() {
       </div>
 
       {/* Registration banner */}
-      <div className="card" style={{
-        marginBottom: 28, padding: "24px 28px",
+      <div className="card section" style={{
         background: "linear-gradient(135deg, #0d1117, #1a2130)",
         border: "1.5px solid #30363d",
         display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16,
@@ -389,7 +387,7 @@ export default function TruckInfo() {
       </div>
 
       {/* Document Management */}
-      <div className="card" style={{ padding: 24 }}>
+      <div className="card section">
         <DocumentManager
           linkedTo={truckData._id || user?.id}
           linkedType="truck"

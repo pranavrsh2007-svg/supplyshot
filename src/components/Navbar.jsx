@@ -120,7 +120,7 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
       <div style={{ flex: 1 }} />
 
       {/* Desktop nav links */}
-      <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+      <div className="top-nav-links" style={{ display: "flex", gap: 2, alignItems: "center" }}>
         {navLinks.map(({ path, label }) => (
           <Link
             key={path}

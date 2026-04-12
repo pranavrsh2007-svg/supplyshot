@@ -154,10 +154,10 @@ export default function Stops() {
         </div>
       ) : (
         /* ── 2. Split View: Services List & Map ── */
-        <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
+        <div className="responsive-split" style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
           
           {/* LEFT: Services & Filters */}
-          <div style={{ 
+          <div className="responsive-panel" style={{ 
             flex: "0 0 420px", display: "flex", flexDirection: "column", 
             gap: 16, overflowY: "auto", paddingRight: 4
           }}>
@@ -303,7 +303,7 @@ export default function Stops() {
           </div>
 
           {/* RIGHT: Dynamic Map */}
-          <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", border: `1px solid ${darkMode ? '#30363d' : '#e1e8f0'}` }}>
+          <div className="responsive-map-container" style={{ flex: 1, borderRadius: 16, overflow: "hidden", border: `1px solid ${darkMode ? '#30363d' : '#e1e8f0'}` }}>
             <LeafletMap
               source={routeInfo.source}
               destination={routeInfo.destination}

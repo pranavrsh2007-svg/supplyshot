@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import {
   ThemeProvider, AuthProvider, VoiceProvider, RouteProvider,
@@ -28,15 +28,26 @@ import TripInsights from "./pages/TripInsights";
 const FULL_PAGES = ["/", "/auth"];
 
 function AppLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const { darkMode } = useTheme();
   const location = useLocation();
   const isFullPage = FULL_PAGES.includes(location.pathname);
+
+  // Auto-close sidebar on mobile on route change
+  useEffect(() => {
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
 
   return (
     <div className={darkMode ? "dark-mode" : "light-mode"} style={{ minHeight: "100vh" }}>
       {!isFullPage && (
         <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      )}
+
+      {sidebarOpen && !isFullPage && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       {!isFullPage ? (

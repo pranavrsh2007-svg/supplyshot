@@ -168,7 +168,7 @@ export default function Dashboard() {
       </div>
 
       {/* Driver + Truck summary strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+      <div className="responsive-split" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
         {/* Driver card */}
         <div className="card glass" style={{ padding: 20, display: "flex", alignItems: "center", gap: 18 }}>
           <div style={{
@@ -239,13 +239,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, flexWrap: "wrap" }}>
+      <div className="responsive-split" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, flexWrap: "wrap" }}>
         {/* Left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Quick Actions */}
           <div className="card glass" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{t("dashboard.quickActions")}</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+            <div className="responsive-grid-cols" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
               {quickActions.map(({ icon: Icon, labelKey, to, color }) => (
                 <Link
                   key={to}
