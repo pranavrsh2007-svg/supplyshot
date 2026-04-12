@@ -20,6 +20,7 @@ const driverData = {
   joinDate: "January 2023",
   homeCity: "Mumbai, Maharashtra",
   languages: ["Hindi", "Marathi", "English"],
+  emergencyContact: "+919876543210", 
 };
 
 export default function Profile() {
@@ -53,6 +54,7 @@ export default function Profile() {
     { icon: BarChart2, labelKey: "profile.totalTrips", key: "trips" },
     { icon: Truck, labelKey: "profile.vehicleType", key: "vehicle" },
     { icon: MapPin, labelKey: "profile.homeCity", key: "homeCity" },
+    { icon: AlertTriangle, labelKey: "nav.emergency", key: "emergencyContact" },
   ];
 
   return (
@@ -257,7 +259,7 @@ export default function Profile() {
                 >
                   {t(labelKey)}
                 </div>
-                {editMode && ["name", "phone", "email", "homeCity"].includes(key) ? (
+                {editMode && ["name", "phone", "email", "homeCity", "emergencyContact"].includes(key) ? (
                   <input
                     className="input-field"
                     value={editData[key]}

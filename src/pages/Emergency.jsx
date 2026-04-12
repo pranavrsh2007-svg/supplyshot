@@ -30,6 +30,23 @@ export default function Emergency() {
         );
         // Speak in selected language
         speak(t("voice.sosActivated"));
+
+        // Trigger SMS/WhatsApp after short delay
+        setTimeout(() => {
+          // Use a default for now, ideally this would come from profile context/localStorage
+          const contact = "+919876543210"; 
+          const message = `🚨 EMERGENCY SOS! I need help. My current location: https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+          
+          // SMS
+          const smsUri = `sms:${contact}${window.navigator.userAgent.match(/iPhone/i) ? '&' : '?'}body=${encodeURIComponent(message)}`;
+          // WhatsApp
+          const waUri = `https://wa.me/${contact.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`;
+          
+          if (confirm("Send SOS via SMS and WhatsApp?")) {
+            window.open(smsUri, '_blank');
+            setTimeout(() => window.open(waUri, '_blank'), 1000);
+          }
+        }, 800);
       }
     }, 1000);
   };
