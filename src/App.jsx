@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { auth } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import {
   ThemeProvider, AuthProvider, VoiceProvider, RouteProvider,
@@ -23,15 +25,29 @@ import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import TruckInfo from "./pages/TruckInfo";
 import TripInsights from "./pages/TripInsights";
+import Login from "./pages/Login";
 
 // Pages that DON'T use the sidebar layout
-const FULL_PAGES = ["/", "/auth"];
+const FULL_PAGES = ["/", "/auth", "/login"];
 
 function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const { darkMode } = useTheme();
   const location = useLocation();
   const isFullPage = FULL_PAGES.includes(location.pathname);
+
+  // Firebase auth state listener (observes login/logout globally)
+  useEffect(() => {
+    let unsub = () => {};
+    try {
+      unsub = onAuthStateChanged(auth, (user) => {
+        console.log("Firebase user:", user?.email ?? "not signed in");
+      });
+    } catch (e) {
+      console.warn("onAuthStateChanged error:", e);
+    }
+    return () => unsub();
+  }, []);
 
   // Auto-close sidebar on mobile on route change
   useEffect(() => {
@@ -82,8 +98,9 @@ function AppLayout() {
         </div>
       ) : (
         <Routes>
-          <Route path="/"     element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/"      element={<Landing />} />
+          <Route path="/auth"  element={<Auth />} />
+          <Route path="/login" element={<Login />} />
         </Routes>
       )}
     </div>
