@@ -40,6 +40,15 @@ function AppLayout() {
     }
   }, [location.pathname]);
 
+  // Prevent background scrolling when sidebar is open on mobile
+  useEffect(() => {
+    if (window.innerWidth <= 768 && sidebarOpen) {
+      document.body.classList.add("sidebar-open");
+    } else {
+      document.body.classList.remove("sidebar-open");
+    }
+  }, [sidebarOpen]);
+
   return (
     <div className={darkMode ? "dark-mode" : "light-mode"} style={{ minHeight: "100vh" }}>
       {!isFullPage && (
@@ -47,7 +56,7 @@ function AppLayout() {
       )}
 
       {sidebarOpen && !isFullPage && (
-        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+        <div className="sidebar-overlay fixed inset-0 bg-black/40 z-[9998]" onClick={() => setSidebarOpen(false)} />
       )}
 
       {!isFullPage ? (

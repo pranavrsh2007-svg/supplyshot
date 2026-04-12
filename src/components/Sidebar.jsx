@@ -34,8 +34,13 @@ export default function Sidebar({ open }) {
 
   return (
     <aside
-      className={`sidebar glass-static ${open ? "open" : ""}`}
-      style={{ display: open ? "block" : "none" }}
+      className={`sidebar glass-static fixed top-0 left-0 h-full w-[85%] max-w-[320px] shadow-xl md:w-[260px] md:top-[64px] md:h-[calc(100vh-64px)] ${open ? "open" : ""}`}
+      style={{ 
+        display: open ? "block" : "none",
+        backgroundColor: "#ffffff",
+        zIndex: 9999,
+        backdropFilter: "none"
+      }}
     >
       {sections.map(({ headingKey, items }) => (
         <div key={headingKey} style={{ marginBottom: 8 }}>
