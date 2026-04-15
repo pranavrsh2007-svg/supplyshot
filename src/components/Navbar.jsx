@@ -4,6 +4,7 @@ import { useTheme, useAuth } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import NotificationDropdown from "./NotificationDropdown";
+import teamLogo from "../assets/team-logo.jpeg";
 import {
   Truck, Sun, Moon, Menu, X, LayoutDashboard, Navigation,
   MapPin, AlertTriangle, LogOut, LogIn, User, ChevronDown, Globe,
@@ -91,18 +92,11 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
           gap: 10,
         }}
       >
-        <div
-          style={{
-            background: "linear-gradient(135deg, #0B5ED7, #0847b0)",
-            borderRadius: "10px",
-            padding: "7px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Truck size={20} color="white" />
-        </div>
+        <img
+          src={teamLogo}
+          alt="Team Logo"
+          style={{ width: "32px", height: "32px", borderRadius: "8px", objectFit: "cover" }}
+        />
         <span
           style={{
             fontFamily: "Outfit, sans-serif",

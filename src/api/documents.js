@@ -25,15 +25,12 @@ export const uploadDocument = async (formData, onProgress) => {
     onProgress?.(p);
   }
 
-  const objectUrl = URL.createObjectURL(file);
   const doc = {
     _id: "doc_" + Date.now(),
     fileName: file.name,
     originalName: file.name,
     mimeType: file.type,
     size: file.size,
-    url: objectUrl,   // object URL — valid for current session only
-    objectUrl,        // keep ref for cleanup
     linkedTo,
     linkedType,
     createdAt: new Date().toISOString(),

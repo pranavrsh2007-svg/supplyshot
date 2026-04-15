@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useAuth, useTheme } from "../context/AppContext";
+import { useAuth, useTheme, useRoute } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import ChartsPanel from "../components/ChartsPanel";
 import TruckSVG from "../components/TruckSVG";
@@ -23,7 +23,8 @@ const alerts = [
 ];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, userData, loading } = useAuth();
+  const { routeInfo } = useRoute();
   const { darkMode } = useTheme();
   const { t } = useTranslation();
   const [truckData, setTruckData] = useState(null);
@@ -59,11 +60,16 @@ export default function Dashboard() {
     { labelKey: "dashboard.brakes",   value: 78, color: "#8b5cf6" },
   ];
 
-  const truckStatus = truckData?.status || "operational";
-  const truckNumber = truckData?.number || user?.truckNumber || "MH12AB1234";
-  const nextService = truckData?.nextService ? new Date(truckData.nextService) : new Date("2026-06-01");
+  const truckDataSafe = userData?.truckData || truckData;
+  const truckStatus = truckDataSafe?.status || "operational";
+  const truckNumber = truckDataSafe?.number || userData?.truckNumber || user?.truckNumber || "MH12AB1234";
+  const nextService = truckDataSafe?.nextService ? new Date(truckDataSafe.nextService) : new Date("2026-06-01");
   const diffDays    = Math.ceil((nextService - new Date()) / (1000 * 60 * 60 * 24));
   const serviceDue  = diffDays <= 60;
+
+  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
+
+  const displayUser = userData || user;
 
   return (
     <div>
@@ -71,7 +77,7 @@ export default function Dashboard() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 className="section-heading" style={{ fontSize: 26, marginBottom: 4 }}>
-            {t(greetingKey)}, {user?.name || t("dashboard.driver")} 👋
+            {t(greetingKey)}, {displayUser?.name || "Pranav Shinde"} 👋
           </h1>
           <p style={{ opacity: 0.6, fontSize: 14 }}>
             {t("dashboard.drivingOverview")} — {new Date().toLocaleDateString("en-IN", { dateStyle: "long" })}
@@ -83,6 +89,35 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Active Route Banner */}
+      {routeInfo?.routeData && (
+        <div style={{
+          padding: "16px 20px", borderRadius: 14, marginBottom: 24,
+          background: "linear-gradient(135deg, #0B5ED7, #0847b0)",
+          color: "white", display: "flex", alignItems: "center", justifyContent: "space-between",
+          boxShadow: "0 6px 20px rgba(11,94,215,0.25)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.15)",
+              display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <Navigation size={22} color="white" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>You have an active route</h3>
+              <p style={{ fontSize: 13, opacity: 0.85 }}>{routeInfo.source?.name?.split(",")[0]} → {routeInfo.destination?.name?.split(",")[0]} • Click continue to resume trip.</p>
+            </div>
+          </div>
+          <Link to="/planner" style={{
+            padding: "8px 20px", borderRadius: 10, background: "white", color: "#0B5ED7",
+            textDecoration: "none", fontWeight: 700, fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+          }}>
+            Continue
+          </Link>
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
@@ -177,14 +212,14 @@ export default function Dashboard() {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 22, fontWeight: 800, color: "white", flexShrink: 0,
           }}>
-            {user?.name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "PS"}
+            {(displayUser?.name || "Pranav Shinde").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, opacity: 0.55, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 3 }}>
               {t("dashboard.driver_label")}
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "Outfit, sans-serif", marginBottom: 4 }}>
-              {user?.name || "Driver"}
+              {displayUser?.name || "Pranav Shinde"}
             </div>
             <div style={{ display: "flex", gap: 12, fontSize: 12, opacity: 0.7 }}>
               <span>🚗 Heavy Truck</span>

@@ -134,19 +134,19 @@ async function fetchOSRM(waypoints) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Planner() {
   const { darkMode } = useTheme();
-  const { setRouteInfo } = useRoute();
+  const { routeInfo, setRouteInfo } = useRoute();
   const { t } = useTranslation();
   const { speak, stop, voiceEnabled, toggleVoice, supported, isSpeaking } = useVoice();
 
   // ── Core state ──────────────────────────────────────────────────────────────
-  const [source,         setSource]      = useState(null);
-  const [destination,    setDest]        = useState(null);
-  const [halts,          setHalts]       = useState([{ id: Date.now(), value: null }]);
+  const [source,         setSource]      = useState(routeInfo?.source || null);
+  const [destination,    setDest]        = useState(routeInfo?.destination || null);
+  const [halts,          setHalts]       = useState(routeInfo?.halts?.length ? routeInfo.halts.map(h => ({id: Date.now() + Math.random(), value: h})) : [{ id: 1, value: null }]);
   const [loading,        setLoading]     = useState(false);
   const [error,          setError]       = useState("");
-  const [routeData,      setRouteData]   = useState(null);
-  const [allRoutes,      setAllRoutes]   = useState([]);
-  const [selectedRoute,  setSelected]    = useState(1);
+  const [routeData,      setRouteData]   = useState(routeInfo?.routeData || null);
+  const [allRoutes,      setAllRoutes]   = useState(routeInfo?.allRoutes || []);
+  const [selectedRoute,  setSelected]    = useState(0);
   const [clickMode,      setClickMode]   = useState(null);
   const [showWeather,    setShowWeather] = useState(false);
   const [riskSegments,   setRiskSegments] = useState([]);
@@ -266,15 +266,16 @@ export default function Planner() {
     }
   }, [clickMode, speak, t]);
 
-  // ── Edit route (reset to form view) ─────────────────────────────────────────
+  // ── Edit route (reset to form view if desired) ──────────────────────────────
   const handleEditRoute = useCallback(() => {
     setHasPlannedRoute(false);
     setRouteData(null);
     setAllRoutes([]);
     setRiskSegments([]);
+    setRouteInfo({ source, destination, halts: [], routeCoords: [], routeData: null, allRoutes: [] });
     // Cancel any ongoing voice
     stop();
-  }, [stop]);
+  }, [source, destination, setRouteInfo, stop]);
 
   // ── Route fetching with waypoints ────────────────────────────────────────────
   const fetchRoute = useCallback(async () => {
@@ -333,6 +334,8 @@ export default function Planner() {
         destination,
         halts: validHalts,
         routeCoords: activeRoute.coords,
+        routeData: newRouteData,
+        allRoutes: routes,
       });
 
       // Scroll to AI results panel smoothly
@@ -543,10 +546,9 @@ export default function Planner() {
         <div className="route-sidebar" style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%", overflowY: "auto", paddingRight: 4, paddingBottom: 20 }}>
 
           {/* ──────────────────────────────────────────────────────────────────
-              FORM VIEW: shown only before route is planned
+              FORM VIEW: Always visible to not break layout
               ────────────────────────────────────────────────────────────────── */}
-          {!hasPlannedRoute && (
-            <div className="card" style={{ padding: 20 }}>
+          <div className="card" style={{ padding: 20 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
                 <Navigation size={16} color="#0B5ED7" /> {t("planner.planRoute")}
               </div>
@@ -653,7 +655,6 @@ export default function Planner() {
                 </div>
               )}
             </div>
-          )}
 
           {/* ──────────────────────────────────────────────────────────────────
               ROUTE RESULTS (Compact UI)
@@ -681,12 +682,12 @@ export default function Planner() {
                     style={{
                       display: "flex", alignItems: "center", gap: 5,
                       padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                      background: darkMode ? "rgba(11,94,215,0.12)" : "#eff6ff",
-                      border: "1px solid #bfdbfe", color: "#0B5ED7", cursor: "pointer",
+                      background: darkMode ? "rgba(220,53,69,0.12)" : "rgba(220,53,69,0.06)",
+                      border: "1px solid rgba(220,53,69,0.2)", color: "#DC3545", cursor: "pointer",
                       transition: "all 0.2s",
                     }}
                   >
-                    <Edit2 size={12} /> Edit
+                    <X size={12} /> Clear Route
                   </button>
                 </div>
 

@@ -8,7 +8,7 @@
   --secondary: #198754;
   --danger: #DC3545;
   --warning: #FFC107;
-  --bg-light: #f0f4ff;
+  --bg-light: #ffffff;
   --bg-dark: #0d1117;
   --card-light: #ffffff;
   --card-dark: #161b22;
@@ -212,19 +212,32 @@ body {
   left: 0;
   padding: 16px;
   overflow-y: auto;
-  border-right: 1px solid;
   transition: all 0.3s ease;
-  z-index: 1000;
   box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  background: #ffffff !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  border-right: 1px solid #e5e7eb;
+  z-index: 50;
 }
 .light-mode .sidebar {
-  background: #ffffff;
+  background: #ffffff !important;
   border-color: #e5e7eb;
   color: #1f2937;
 }
 .dark-mode .sidebar {
-  background: #161b22;
+  background: #161b22 !important;
   border-color: var(--border-dark);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.3);
+  z-index: 40;
 }
 
 .sidebar-link {
@@ -239,14 +252,29 @@ body {
   text-decoration: none;
   transition: all 0.2s ease;
   margin-bottom: 4px;
+  background: transparent !important;
   color: inherit;
 }
+.light-mode .sidebar-link {
+  color: #1f2937;
+}
 .light-mode .sidebar-link:hover {
-  background: #f3f4f6;
+  background: #f3f4f6 !important;
 }
 .light-mode .sidebar-link.active {
-  background: #eff6ff;
+  background: #e5e7eb !important;
   color: #2563eb;
+}
+
+.sidebar-section-title {
+  background: transparent !important;
+  color: #6b7280;
+}
+
+.system-status-card {
+  background: #ecfdf5 !important;
+  border: 1px solid #d1fae5;
+  border-radius: 12px;
 }
 .dark-mode .sidebar-link:hover,
 .dark-mode .sidebar-link.active {
@@ -258,6 +286,7 @@ body {
 .page-layout {
   display: flex;
   min-height: calc(100vh - 64px);
+  width: 100%;
 }
 .main-content {
   margin-left: 240px;
@@ -268,8 +297,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  z-index: 1;
   position: relative;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body.sidebar-open {
@@ -334,6 +364,9 @@ img {
   overflow: hidden;
   border: 1px solid;
   transition: box-shadow 0.3s ease;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
 }
 .light-mode .map-wrapper {
   border-color: var(--border-light);

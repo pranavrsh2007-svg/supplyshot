@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme, useAuth } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import DocumentManager from "../components/DocumentManager";
@@ -25,16 +25,29 @@ const driverData = {
 
 export default function Profile() {
   const { darkMode } = useTheme();
-  const { user } = useAuth();
+  const { user, userData, loading } = useAuth();
   const { t } = useTranslation();
   const [editMode, setEditMode] = useState(false);
-  const [data, setData] = useState(driverData);
-  const [editData, setEditData] = useState(driverData);
+
+  const displayUser = userData || user || {};
+  const initialMergedData = { ...driverData, ...displayUser };
+  const [data, setData] = useState(initialMergedData);
+  const [editData, setEditData] = useState(initialMergedData);
+
+  useEffect(() => {
+    if (!loading) {
+      const combined = { ...driverData, ...(userData || user || {}) };
+      setData(combined);
+      setEditData(combined);
+    }
+  }, [userData, user, loading]);
 
   const handleSave = () => {
     setData(editData);
     setEditMode(false);
   };
+
+  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
 
   const initials = data.name.split(" ").map((n) => n[0]).join("").toUpperCase();
 

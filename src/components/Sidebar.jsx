@@ -34,23 +34,20 @@ export default function Sidebar({ open }) {
 
   return (
     <aside
-      className={`sidebar glass-static fixed top-0 left-0 h-full w-[85%] max-w-[320px] shadow-xl md:w-[260px] md:top-[64px] md:h-[calc(100vh-64px)] ${open ? "open" : ""}`}
+      className={`sidebar fixed top-0 left-0 h-full w-[85%] max-w-[320px] shadow-xl md:w-[260px] md:top-[64px] md:h-[calc(100vh-64px)] ${open ? "open" : ""}`}
       style={{ 
-        display: open ? "block" : "none",
-        backgroundColor: "#ffffff",
-        zIndex: 9999,
-        backdropFilter: "none"
+        display: open ? "block" : "none"
       }}
     >
       {sections.map(({ headingKey, items }) => (
         <div key={headingKey} style={{ marginBottom: 8 }}>
           <p
+            className="sidebar-section-title"
             style={{
               fontSize: 10,
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "1.2px",
-              opacity: 0.45,
               padding: "8px 12px 4px",
             }}
           >
@@ -99,13 +96,10 @@ export default function Sidebar({ open }) {
 
       {/* Status indicator */}
       <div
+        className="system-status-card"
         style={{
           marginTop: 16,
           padding: "12px",
-          borderRadius: 12,
-          background: darkMode ? "rgba(25,135,84,0.15)" : "#d1fae5",
-          border: "1px solid",
-          borderColor: darkMode ? "rgba(25,135,84,0.3)" : "#a7f3d0",
         }}
       >
         <div

@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import {
   ThemeProvider, AuthProvider, VoiceProvider, RouteProvider,
-  NotificationsProvider, useTheme,
+  NotificationsProvider, useTheme, useAuth
 } from "./context/AppContext";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -33,8 +33,10 @@ const FULL_PAGES = ["/", "/auth", "/login"];
 function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const { darkMode } = useTheme();
+  const { userData, loading } = useAuth();
   const location = useLocation();
   const isFullPage = FULL_PAGES.includes(location.pathname);
+  const isDemo = !userData;
 
   // Firebase auth state listener (observes login/logout globally)
   useEffect(() => {
@@ -63,16 +65,38 @@ function AppLayout() {
     } else {
       document.body.classList.remove("sidebar-open");
     }
+
+    // Fix map cutting issue
+    setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 300);
   }, [sidebarOpen]);
 
   return (
     <div className={darkMode ? "dark-mode" : "light-mode"} style={{ minHeight: "100vh" }}>
+      {!isFullPage && isDemo && !loading && (
+        <div style={{
+          width: "100%",
+          background: "#FFF3CD",
+          color: "#856404",
+          padding: "8px",
+          textAlign: "center",
+          fontSize: "14px",
+          fontWeight: "500",
+          position: "sticky",
+          top: 0,
+          zIndex: 999
+        }}>
+          ⚡ You are viewing demo data
+        </div>
+      )}
+
       {!isFullPage && (
         <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       )}
 
       {sidebarOpen && !isFullPage && (
-        <div className="sidebar-overlay fixed inset-0 bg-black/40 z-[9998]" onClick={() => setSidebarOpen(false)} />
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       {!isFullPage ? (

@@ -1,20 +1,34 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getNotifications } from "../api/notifications";
+import { auth, db } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 const ThemeContext         = createContext();
-const AuthContext          = createContext();
+export const AppContext    = createContext(); // Formerly AuthContext
 const VoiceContext         = createContext();
 const RouteContext         = createContext();
 const NotificationsContext = createContext();
 
 /* ── Route Data ────────────────────────────────────────────────────────────── */
 export function RouteProvider({ children }) {
-  const [routeInfo, setRouteInfo] = useState({
-    source: null,
-    destination: null,
-    halts: [],
-    routeCoords: [],
+  const [routeInfo, setRouteInfo] = useState(() => {
+    const saved = localStorage.getItem("routeData");
+    return saved ? JSON.parse(saved) : {
+      source: null,
+      destination: null,
+      halts: [],
+      routeCoords: [],
+      routeData: null,
+      allRoutes: []
+    };
   });
+
+  useEffect(() => {
+    if (routeInfo) {
+      localStorage.setItem("routeData", JSON.stringify(routeInfo));
+    }
+  }, [routeInfo]);
   
   // Globally store fetched POIs per halt { haltKey: {...categories, radiusUsed} }
   const [nearbyServices, setNearbyServices] = useState({});
@@ -54,27 +68,60 @@ export function ThemeProvider({ children }) {
 
 /* ── Auth ───────────────────────────────────────────────────────────────────── */
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+  const [localUser, setLocalUser] = useState(() => {
     const saved = localStorage.getItem("truckUser");
     return saved ? JSON.parse(saved) : null;
   });
+  
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (userData, token) => {
-    localStorage.setItem("truckUser", JSON.stringify(userData));
+  useEffect(() => {
+    let unsub = () => {};
+    try {
+      unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            const docRef = doc(db, "users", firebaseUser.uid);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+              setUserData(snap.data());
+            } else {
+              setUserData(null);
+            }
+          } catch (e) {
+            console.error("Error fetching user data:", e);
+            setUserData(null);
+          }
+        } else {
+          setUserData(null);
+        }
+        setLoading(false);
+      });
+    } catch (e) {
+      console.error("Auth observer error:", e);
+      setLoading(false);
+    }
+    return () => unsub();
+  }, []);
+
+  const login = (data, token) => {
+    localStorage.setItem("truckUser", JSON.stringify(data));
     if (token) localStorage.setItem("truckToken", token);
-    setUser(userData);
+    setLocalUser(data);
   };
 
   const logout = () => {
     localStorage.removeItem("truckUser");
     localStorage.removeItem("truckToken");
-    setUser(null);
+    setLocalUser(null);
+    setUserData(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AppContext.Provider value={{ user: localUser, userData, loading, login, logout }}>
       {children}
-    </AuthContext.Provider>
+    </AppContext.Provider>
   );
 }
 
@@ -135,7 +182,7 @@ export function NotificationsProvider({ children }) {
 
 /* ── Hooks ──────────────────────────────────────────────────────────────────── */
 export const useTheme         = () => useContext(ThemeContext);
-export const useAuth          = () => useContext(AuthContext);
+export const useAuth          = () => useContext(AppContext);
 export const useVoiceCtx      = () => useContext(VoiceContext);
 export const useRoute         = () => useContext(RouteContext);
 export const useNotifications = () => useContext(NotificationsContext);
