@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "../context/AppContext";
+import { useTheme, useAuth } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import { Phone, MapPin, AlertTriangle, Heart, Wrench, Shield, CheckCircle } from "lucide-react";
 
@@ -7,6 +7,7 @@ import { useVoice } from "../hooks/useVoice";
 
 export default function Emergency() {
   const { darkMode } = useTheme();
+  const { userData } = useAuth();
   const { t } = useTranslation();
   const { speak } = useVoice();
   const [sosActive, setSosActive] = useState(false);
@@ -24,29 +25,45 @@ export default function Emergency() {
       if (count === 0) {
         clearInterval(timer);
         setCountdown(null);
-        navigator.geolocation?.getCurrentPosition(
-          (pos) => setLocation(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`),
-          () => setLocation("27.1767, 78.0081 (Approx)")
-        );
-        // Speak in selected language
-        speak(t("voice.sosActivated"));
 
-        // Trigger SMS/WhatsApp after short delay
-        setTimeout(() => {
-          // Use a default for now, ideally this would come from profile context/localStorage
-          const contact = "+919876543210"; 
-          const message = `🚨 EMERGENCY SOS! I need help. My current location: https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-          
-          // SMS
-          const smsUri = `sms:${contact}${window.navigator.userAgent.match(/iPhone/i) ? '&' : '?'}body=${encodeURIComponent(message)}`;
-          // WhatsApp
-          const waUri = `https://wa.me/${contact.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`;
-          
-          if (confirm("Send SOS via SMS and WhatsApp?")) {
+        // Get location and then trigger messaging
+        navigator.geolocation?.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            
+            // Speak in selected language
+            speak(t("voice.sosActivated"));
+
+            // Trigger SMS/WhatsApp automatically
+            const contact = userData?.emergencyContact || "+919876543210"; 
+            const userName = userData?.name || "Driver";
+            const vehicle = userData?.vehicle || "Vehicle";
+            const message = `🚨 EMERGENCY SOS!\n\nName: ${userName}\nVehicle: ${vehicle}\n\nI need help! My current location: https://www.google.com/maps?q=${lat},${lng}`;
+            
+            // SMS
+            const isIphone = typeof window !== 'undefined' && /iPhone/i.test(window.navigator.userAgent);
+            const smsUri = `sms:${contact}${isIphone ? '&' : '?'}body=${encodeURIComponent(message)}`;
+            // WhatsApp
+            const waUri = `https://wa.me/${contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+            
+            // For a truly automatic feel, we try to open them. 
+            // Note: Browsers might block these if not directly from a click, 
+            // but the 5-sec countdown is the "initiation".
             window.open(smsUri, '_blank');
-            setTimeout(() => window.open(waUri, '_blank'), 1000);
+            setTimeout(() => window.open(waUri, '_blank'), 500);
+          },
+          () => {
+            setLocation("Location Unavailable");
+            speak(t("voice.sosActivated"));
+            const contact = userData?.emergencyContact || "+919876543210";
+            const userName = userData?.name || "Driver";
+            const message = `🚨 EMERGENCY SOS!\n\nName: ${userName}\n\nI need help! (Location Unavailable)`;
+            const waUri = `https://wa.me/${contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+            window.open(waUri, '_blank');
           }
-        }, 800);
+        );
       }
     }, 1000);
   };

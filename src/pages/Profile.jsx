@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useTheme, useAuth } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import DocumentManager from "../components/DocumentManager";
+import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { db, auth } from "../firebase";
 import {
   User, Calendar, Phone, Mail, Clock, BarChart2, Truck,
   Edit3, CheckCircle, MapPin, Star, Award, Camera, TrendingUp, ShieldCheck, AlertTriangle, Zap,
@@ -28,6 +30,7 @@ export default function Profile() {
   const { user, userData, loading } = useAuth();
   const { t } = useTranslation();
   const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const displayUser = userData || user || {};
   const initialMergedData = { ...driverData, ...displayUser };
@@ -42,9 +45,27 @@ export default function Profile() {
     }
   }, [userData, user, loading]);
 
-  const handleSave = () => {
-    setData(editData);
-    setEditMode(false);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const currentUid = auth.currentUser?.uid || user?.uid || user?.id;
+      if (currentUid) {
+        const userRef = doc(db, "users", currentUid);
+        // Using setDoc with merge: true to handle cases where doc might not exist yet
+        await setDoc(userRef, editData, { merge: true });
+        setData(editData);
+        setEditMode(false);
+      } else {
+        // Fallback to local state if not logged in via Firebase
+        setData(editData);
+        setEditMode(false);
+      }
+    } catch (e) {
+      console.error("Error updating profile:", e);
+      alert("Failed to save profile. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
@@ -168,9 +189,15 @@ export default function Profile() {
               <button
                 className="btn-success"
                 onClick={handleSave}
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", fontSize: 14 }}
+                disabled={saving}
+                style={{ 
+                  display: "flex", alignItems: "center", gap: 8, 
+                  padding: "10px 20px", fontSize: 14,
+                  opacity: saving ? 0.7 : 1,
+                  cursor: saving ? "not-allowed" : "pointer"
+                }}
               >
-                {t("profile.saveChanges")}
+                {saving ? "Saving..." : t("profile.saveChanges")}
               </button>
               <button
                 onClick={() => setEditMode(false)}
