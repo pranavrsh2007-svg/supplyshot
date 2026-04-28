@@ -37,7 +37,7 @@ export default function Emergency() {
             speak(t("voice.sosActivated"));
 
             // Trigger SMS/WhatsApp automatically
-            const contact = userData?.emergencyContact || "+919876543210"; 
+            const contact = userData?.emergencyContact || "+917774833324"; 
             const userName = userData?.name || "Driver";
             const vehicle = userData?.vehicle || "Vehicle";
             const message = `🚨 EMERGENCY SOS!\n\nName: ${userName}\nVehicle: ${vehicle}\n\nI need help! My current location: https://www.google.com/maps?q=${lat},${lng}`;
@@ -57,7 +57,7 @@ export default function Emergency() {
           () => {
             setLocation("Location Unavailable");
             speak(t("voice.sosActivated"));
-            const contact = userData?.emergencyContact || "+919876543210";
+            const contact = userData?.emergencyContact || "+917774833324";
             const userName = userData?.name || "Driver";
             const message = `🚨 EMERGENCY SOS!\n\nName: ${userName}\n\nI need help! (Location Unavailable)`;
             const waUri = `https://wa.me/${contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
